@@ -157,6 +157,12 @@ architecture rtl of flower_top is
 	signal coinc_trig_scaler_bits : std_logic_vector(11 downto 0);
 	signal scaler_to_read_int : std_logic_vector(23 downto 0);
 	signal coinc_trig_internal : std_logic;
+	
+	signal dummy_coinc_trig_scaler_bits : std_logic_vector(2*(num_beams+1)-1 downto 0);
+	signal dummy_scaler_to_read_int : std_logic_vector(23 downto 0);
+	signal dummy_coinc_trig_internal : std_logic;
+	
+	
 	--//data chunks
 	signal ram_chunked_data : RAM_CHUNKED_DATA_TYPE;
 	signal event_metadata : event_metadata_type;
@@ -182,7 +188,6 @@ architecture rtl of flower_top is
 		data_oe 			: in std_logic_vector(3 downto 0);
 		data_out			: out std_logic_Vector(3 downto 0));
 	end component;
-
 begin
 
 	--//test LED
@@ -398,6 +403,20 @@ begin
 		ch3_data_i	=> ch3_data,
 		trig_bits_o => coinc_trig_scaler_bits,
 		coinc_trig_o=> coinc_trig_internal);
+		
+	xPHASED_TRIG : entity work.phased_trigger
+	port map(
+		rst_i			=> reset_power_on,
+		clk_i			=> clock_internal_10MHz_loc,
+		clk_data_i	=> clock_internal_core,
+		registers_i	=> registers,
+		ch0_data_i	=> ch0_data,
+		ch1_data_i	=> ch1_data, 
+		ch2_data_i	=> ch2_data, 
+		ch3_data_i	=> ch3_data,
+		trig_bits_o => dummy_coinc_trig_scaler_bits,
+		phased_trig_o=> dummy_coinc_trig_internal);
+	
 	-----------------------------------------
 	xGLOBAL_TIMING : entity work.pps_timing
 	port map(

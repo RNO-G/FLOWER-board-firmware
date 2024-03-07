@@ -100,6 +100,15 @@ type sum_power_type is array(define_num_beams-1 downto 0) of
 --/////////
 constant define_16avg_pow_sum_range : integer := 20; --//20 bits (16 bits per sample, 16 samples)
 type average_power_16samp_type is array(define_num_beams-1 downto 0) of std_logic_vector(define_16avg_pow_sum_range-1 downto 0);
+
+constant num_beams: integer:=8;
+constant num_channels: integer:=4;
+
+
+--type antenna_delays is array (num_beams-1 downto 0,num_channels-1 downto 0) of integer;
+--constant beam_delays : antenna_delays := ((12,11,10,9),(16,16,16,16));
+--constant beam_delays : antenna_delays := (others=>(others=>16));
+
 ----------------------------------------------------------------------
 end defs;
 
