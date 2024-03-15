@@ -61,7 +61,7 @@ type rx_data_delay_type is array (7 downto 0) of std_logic_vector(3 downto 0); -
 type buffered_data_type is array (7 downto 0) of std_logic_vector(2*define_ram_width-1 downto 0);
 
 --//registers
-type register_array_type is array (127 downto 0) 
+type register_array_type is array (255 downto 0) 
 	of std_logic_vector(define_register_size-define_address_size-1 downto 0); --//8 bit address, 24 bit data
 
 --//////////////////////////////
@@ -101,7 +101,7 @@ type sum_power_type is array(define_num_beams-1 downto 0) of
 constant define_16avg_pow_sum_range : integer := 20; --//20 bits (16 bits per sample, 16 samples)
 type average_power_16samp_type is array(define_num_beams-1 downto 0) of std_logic_vector(define_16avg_pow_sum_range-1 downto 0);
 
-constant num_beams: integer:=8;
+constant num_beams: integer:=16;
 constant num_channels: integer:=4;
 
 

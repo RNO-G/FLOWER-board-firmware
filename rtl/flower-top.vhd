@@ -83,10 +83,10 @@ architecture rtl of flower_top is
 	---------------------------------------
 	--//FIRMWARE DETAILS--
 	constant fw_version_maj	: std_logic_vector(7 downto 0)  := x"00";
-	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"08";
-	constant fw_year			: std_logic_vector(11 downto 0) := x"7E6"; 
-	constant fw_month			: std_logic_vector(3 downto 0)  := x"9"; 
-	constant fw_day			: std_logic_vector(7 downto 0)  := x"16";
+	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"09";
+	constant fw_year			: std_logic_vector(11 downto 0) := x"7E7"; 
+	constant fw_month			: std_logic_vector(3 downto 0)  := x"3"; 
+	constant fw_day			: std_logic_vector(7 downto 0)  := x"14";
 	---------------------------------------
 	--//the following signals to/from Clock_Manager--
 	signal clock_internal_10MHz_sys		:	std_logic;	
@@ -157,11 +157,13 @@ architecture rtl of flower_top is
 	signal coinc_trig_scaler_bits : std_logic_vector(11 downto 0);
 	signal scaler_to_read_int : std_logic_vector(23 downto 0);
 	signal coinc_trig_internal : std_logic;
-	
-	signal dummy_coinc_trig_scaler_bits : std_logic_vector(2*(num_beams+1)-1 downto 0);
-	signal dummy_scaler_to_read_int : std_logic_vector(23 downto 0);
-	signal dummy_coinc_trig_internal : std_logic;
-	
+	signal phased_trig_scaler_bits : std_logic_vector(2*num_beams+1 downto 0);
+	signal phased_trig_internal : std_logic;
+	signal trig_scaler_bits:std_logic_vector(2*num_beams+1 downto 0):=(others=>'0');
+	signal phased_trig_enable:std_logic;
+	signal coinc_trig_enable:std_logic;
+	signal phased_trig_bits_metadata : std_logic_vector(num_beams-1 downto 0);
+	signal coinc_trig_bits_metadata: std_logic_vector(3 downto 0);
 	
 	--//data chunks
 	signal ram_chunked_data : RAM_CHUNKED_DATA_TYPE;
@@ -190,6 +192,20 @@ architecture rtl of flower_top is
 	end component;
 begin
 
+	proc_trig_types:process(clock_internal_10MHz_loc) 
+	begin
+		if phased_trig_enable = '1' then
+			trig_scaler_bits(2*num_beams+1 downto 0)<=phased_trig_scaler_bits;
+		else 
+			trig_scaler_bits(11 downto 0)<=coinc_trig_scaler_bits;
+		end if;
+	end process;
+	
+	proc_get_enable:process(clock_internal_10MHz_loc)
+	begin
+		coinc_trig_enable<=registers(61)(8);
+		phased_trig_enable<=registers(61)(9);
+	end process;
 	--//test LED
 	gpio_board_io(5) <= gpio_sas_io(0); --clock_internal_1Hz;
 	gpio_board_io(6) <= clock_internal_10Hz;
@@ -270,9 +286,11 @@ begin
 		clk_data_i	=> clock_internal_core,
 		registers_i	=> registers,
 		coinc_trig_i=> coinc_trig_internal,
-		phase_trig_i=> '0', --doesn't exist yet
+		phase_trig_i=> phased_trig_internal,
 		ext_trig_i	=> sma_aux1_io, --use SMA1 for ext trig input. Make selectable?
 		pps_i			=> internal_delayed_pps, --gpio_sas_io(0), 
+		phased_trig_bits_metadata_i => phased_trig_bits_metadata,
+		coinc_trig_bits_metadata_i => coinc_trig_bits_metadata,
 		latched_timestamp_o  => latched_timestamp,
 		status_reg_o	 => event_manager_status_reg,
 		ram_write_o		 => event_ram_write_en,
@@ -388,8 +406,8 @@ begin
 		rx_adc_data_o 		=> adc1_data);
 	--///////////////////////////////////////	
 	-----------------------------------------
-	systrig_o   <= (coinc_trig_internal and registers(92)(0)) or (internal_delayed_pps and registers(92)(8)); 
-	sma_aux0_io <= (coinc_trig_internal and registers(93)(0)) or (internal_delayed_pps and registers(93)(8)); 
+	systrig_o   <= ((phased_trig_internal or coinc_trig_internal) and registers(92)(0)) or (internal_delayed_pps and registers(92)(8)); 
+	sma_aux0_io <= ((phased_trig_internal or coinc_trig_internal) and registers(93)(0)) or (internal_delayed_pps and registers(93)(8)); 
 	--
 	xCOINC_TRIG : entity work.simple_trigger
 	port map(
@@ -414,8 +432,9 @@ begin
 		ch1_data_i	=> ch1_data, 
 		ch2_data_i	=> ch2_data, 
 		ch3_data_i	=> ch3_data,
-		trig_bits_o => dummy_coinc_trig_scaler_bits,
-		phased_trig_o=> dummy_coinc_trig_internal);
+		trig_bits_o => phased_trig_scaler_bits,
+		phased_trig_o=> phased_trig_internal,
+		phased_trig_metadata_o => phased_trig_bits_metadata);
 	
 	-----------------------------------------
 	xGLOBAL_TIMING : entity work.pps_timing
@@ -435,7 +454,7 @@ begin
 		clk_i					=> clock_internal_10MHz_loc,
 		gate_i					=> gpio_sas_io(0), --pps from controller
 		reg_i						=> registers,
-		coinc_trig_bits_i 	=> coinc_trig_scaler_bits,
+		trig_bits_i 	=> trig_scaler_bits,
 		pps_cycle_counter_i	=> internal_pps_cycle_counter,
 		scaler_to_read_o  => scaler_to_read_int);
 	--///////////////////////////////////////	

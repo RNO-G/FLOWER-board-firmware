@@ -24,10 +24,8 @@ generic(
 		ENABLE_PHASED_TRIG : std_logic := '1';
 		--//trigger setting register: coinc trig enable is bit [8]
 		trigger_enable_reg_adr : std_logic_vector(7 downto 0) := x"3D";
-		--//base register for per-channel coincidence thresholds
-		phased_trig_reg_base	: std_logic_vector(7 downto 0):= x"57";
-		--//reg for coinc trig params
-		phased_trig_param_reg	: std_logic_vector(7 downto 0):= x"5B";
+		phased_trig_reg_base	: std_logic_vector(7 downto 0):= x"50";
+		phased_trig_param_reg	: std_logic_vector(7 downto 0):= x"80";
 		address_reg_pps_delay: std_logic_vector(7 downto 0) := x"5E"
 		);
 
@@ -43,7 +41,8 @@ port(
 		ch3_data_i	:	in		std_logic_vector(31 downto 0);
 		
 		trig_bits_o : 	out	std_logic_vector(2*(num_beams+1)-1 downto 0); --for scalers
-		phased_trig_o: 	out	std_logic --trigger
+		phased_trig_o: 	out	std_logic; --trigger
+		phased_trig_metadata_o: out std_logic_vector(num_beams-1 downto 0)
 		);
 end phased_trigger;
 
@@ -61,7 +60,7 @@ constant num_power_bits: integer := 23;
 constant power_sum_bits:	integer := 23; --actually 25 but this fits into the io regs
 constant input_power_thesh_bits:	integer := 12;
 constant power_length: integer := 12;
-constant power_low_bit: integer := 4;
+constant power_low_bit: integer := 0;
 constant power_high_bit: integer := power_low_bit+power_length-1;
 
 type antenna_delays is array (num_beams-1 downto 0,num_channels-1 downto 0) of integer;
@@ -136,6 +135,8 @@ signal coinc_window_int	: unsigned(7 downto 0) := x"02"; --//num of clk_data_i p
 signal is_there_a_trigger: std_logic_vector(num_beams-1 downto 0);
 signal is_there_a_servo: std_logic_vector(num_beams-1 downto 0);
 
+signal trig_bits_metadata: std_logic_vector(num_beams-1 downto 0);
+
 --------------
 component signal_sync is
 port(
@@ -159,7 +160,7 @@ begin
 
 proc_pipeline_data: process(clk_data_i)
 begin
-	if rising_edge(clk_data_i) then
+	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
 		--ch 0
 		for i in 4 to streaming_buffer_length-1 loop
 			streaming_data(0,i)<=streaming_data(0,i-4);
@@ -204,7 +205,7 @@ proc_interpolate: process(clk_data_i)
 --interpolating over 8 beams at a window size of 8. or maybe it's the same.. 8 beams at a window size of 16
 --makes it 2x worse then. ok
 begin
-	if rising_edge(clk_data_i) then
+	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
 		--first pull off the samples we need. 
 		for i in 0 to 3 loop --loop over channels
 			for j in 0 to interp_data_length-1 loop
@@ -223,7 +224,7 @@ end process;
 
 proc_phasing: process(clk_data_i)
 begin
-	if rising_edge(clk_data_i) then 
+	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then 
 		for i in 0 to num_beams-1 loop --loop over beams
 			for j in 0 to phased_sum_length-1 loop
 					
@@ -244,7 +245,7 @@ begin
 	if rst_i = '1' then
 		phased_power<=(others=>(others=>(others=>'0')));
 	
-	elsif rising_edge(clk_data_i) then
+	elsif rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
 		for i in 0 to num_beams-1 loop
 			for j in 0 to phased_sum_length-1 loop
 				phased_power(i,j)<=unsigned(phased_beam_waves(i,j)*phased_beam_waves(i,j))(phased_sum_power_bits-1 downto 0);
@@ -260,7 +261,7 @@ begin
 
 	if rst_i = '1' then
 		power_sum<=(others=>(others=>'0'));
-	elsif rising_edge(clk_data_i) then
+	elsif rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
 		for i in 0 to num_beams-1 loop
 			--power_sum(i)<=resize(phased_power(i,0)+phased_power(i,1),power_sum_bits);
 				
@@ -295,7 +296,7 @@ begin
 	elsif rising_edge(clk_data_i) then
 		--loop over the beams and this is a big mess
 		for i in 0 to num_beams-1 loop
-
+			phased_trig_metadata_o<=triggering_beam;
 			if trig_counter(i) = coinc_window_int then
 				trig_clear(i) <= '1';
 			else
@@ -322,14 +323,14 @@ begin
 			end if;
 			------------------------------------
 		
-			if power_sum(i)>trig_beam_thresh(i) then
+			if avg_power(i)>trig_beam_thresh(i) then
 				triggering_beam(i)<='1';
 				beam_trigger_reg(i)(0)<='1';
 			else
 				triggering_beam(i)<='0';
 				beam_trigger_reg(i)(0)<='0';
 			end if;
-			if power_sum(i)>servo_beam_thresh(i) then
+			if avg_power(i)>servo_beam_thresh(i) then
 				servoing_beam(i)<='1';
 				beam_servo_reg(i)(0)<='1';
 			else
@@ -364,12 +365,12 @@ begin
 		--	phased_servo_reg(0)<='0';
 		--end if;
 		
-		if to_integer(unsigned(triggering_beam AND internal_trigger_beam_mask))>0 then
+		if (to_integer(unsigned(triggering_beam AND internal_trigger_beam_mask))>0) and (internal_phased_trig_en='1') then
 			phased_trigger_reg(0)<='1';
 		else
 			phased_trigger_reg(0)<='0';
 		end if;
-		if to_integer(unsigned(servoing_beam AND internal_trigger_beam_mask))>0 then
+		if (to_integer(unsigned(servoing_beam AND internal_trigger_beam_mask))>0) and (internal_phased_trig_en='1') then
 			phased_servo_reg(0)<='1';
 		else
 			phased_servo_reg(0)<='0';
@@ -390,6 +391,14 @@ begin
 			phased_servo<='0';
 		end if;
 	end if;
+end process;
+
+proc_threshold_set:process(clk_data_i)
+begin
+	for i in 0 to num_beams-1 loop
+		trig_beam_thresh(i)(power_high_bit downto power_low_bit)<=input_trig_thresh(i);
+		servo_beam_thresh(i)(power_high_bit downto power_low_bit)<=input_servo_thresh(i);
+	end loop;
 end process;
 
 --//sync some software commands to the data clock
@@ -437,7 +446,7 @@ trig_array_for_scalars(0)<=phased_trigger;
 phased_trig_o <= phased_trigger_reg(0); --phased trigger for 0->1 transition. phased_trigger_reg(0) for absolute trigger 
 --------------
 
-TrigToScalers	:	 for i in 0 to 2*(num_beams+1)-1 generate 
+TrigToScalers	:	 for i in 0 to 2*(num_beams)+1 generate 
 	xTRIGSYNC : flag_sync
 	port map(
 		clkA 			=> clk_data_i,
