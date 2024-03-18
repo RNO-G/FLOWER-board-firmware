@@ -49,7 +49,7 @@ end phased_trigger;
 
 architecture rtl of phased_trigger is
 
-constant streaming_buffer_length: integer := 16;
+constant streaming_buffer_length: integer := 18;
 constant interp_factor: integer := 4;
 constant interp_data_length: integer := interp_factor*(streaming_buffer_length-1)+1;
 constant window_length:integer := 8;
@@ -65,9 +65,11 @@ constant power_low_bit: integer := 0;
 constant power_high_bit: integer := power_low_bit+power_length-1;
 
 type antenna_delays is array (num_beams-1 downto 0,num_channels-1 downto 0) of integer;
---signal beam_delays : antenna_delays := ((12,11,10,9),(45,45,45,45)); --it will optimize away a lot of the streaming buffer if these numbers are small
-signal beam_delays : antenna_delays := (others=>(others=>32));
---should be ~ 500MHz delay * interp_factor, tho calc should return the interpolated delays for accuracy
+--constant beam_delays : antenna_delays := ((12,11,10,9),(45,45,45,45)); --it will optimize away a lot of the streaming buffer if these numbers are small
+constant beam_delays : antenna_delays := (others=>(others=>32));
+--constant beam_delays : antenna_delays := ((4,23,44,65),(4,22,42,62),(4,21,40,58),(4,20,37,54),(4,18,34,50),(4,17,31,45),(4,15,28,40),(4,13,25,34),(4,12,21,29),(4,10,18,24),(4,8,15,18),(4,7,12,14),(4,5,9,9),(4,4,6,5),(6,5,6,4),(9,7,7,4));
+-- 8 beams!!! signal beam_delays: antenna_delays:=(4,23,44,65),(4,21,40,58),(4,18,34,48),(4,14,27,37),(4,11,19,26),(4,7,12,15),(4,4,6,5),(9,7,7,4));
+--honestly might be useful to add a beam of zero delay. the above have cable delays included into the calc
 
 type interpolated_data_array is array(3 downto 0, interp_data_length-1 downto 0) of signed(7 downto 0);
 signal interp_data: interpolated_data_array;
@@ -132,7 +134,7 @@ signal trig_array_for_scalars : std_logic_vector (2*(num_beams+1)-1 downto 0);
 constant num_div: integer := integer(log2(real(phased_sum_length)));
 constant pad_zeros: std_logic_vector(num_div-1 downto 0):=(others=>'0');
 
-signal coinc_window_int	: unsigned(7 downto 0) := x"02"; --//num of clk_data_i periods
+constant coinc_window_int	: integer := 2; --//num of clk_data_i periods
 
 signal is_there_a_trigger: std_logic_vector(num_beams-1 downto 0);
 signal is_there_a_servo: std_logic_vector(num_beams-1 downto 0);
@@ -445,10 +447,17 @@ end generate;
 
 ------------
 
-trig_array_for_scalars(2*num_beams+1 downto num_beams +2)<=servo_clear(num_beams-1 downto 0);
+--trig_array_for_scalars(2*num_beams+1 downto num_beams +2)<=servo_clear(num_beams-1 downto 0);
+--trig_array_for_scalars(num_beams+1)<=phased_servo;
+--trig_array_for_scalars(num_beams downto 1)<=trig_clear(num_beams-1 downto 0);
+--trig_array_for_scalars(0)<=phased_trigger;
+
+trig_array_for_scalars(2*num_beams+1 downto num_beams +2)<=servoing_beam(num_beams-1 downto 0);
 trig_array_for_scalars(num_beams+1)<=phased_servo;
-trig_array_for_scalars(num_beams downto 1)<=trig_clear(num_beams-1 downto 0);
+trig_array_for_scalars(num_beams downto 1)<=triggering_beam(num_beams-1 downto 0);
 trig_array_for_scalars(0)<=phased_trigger;
+
+
 
 ----TRIGGER OUT!!
 phased_trig_o <= phased_trigger_reg(0); --phased trigger for 0->1 transition. phased_trigger_reg(0) for absolute trigger 
