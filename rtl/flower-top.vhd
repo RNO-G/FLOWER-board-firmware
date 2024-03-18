@@ -86,7 +86,7 @@ architecture rtl of flower_top is
 	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"09";
 	constant fw_year			: std_logic_vector(11 downto 0) := x"7E7"; 
 	constant fw_month			: std_logic_vector(3 downto 0)  := x"3"; 
-	constant fw_day			: std_logic_vector(7 downto 0)  := x"14";
+	constant fw_day			: std_logic_vector(7 downto 0)  := x"12";
 	---------------------------------------
 	--//the following signals to/from Clock_Manager--
 	signal clock_internal_10MHz_sys		:	std_logic;	
@@ -154,16 +154,20 @@ architecture rtl of flower_top is
 	signal ch1_data : std_logic_vector(31 downto 0);
 	signal ch2_data : std_logic_vector(31 downto 0);
 	signal ch3_data : std_logic_vector(31 downto 0);
-	signal coinc_trig_scaler_bits : std_logic_vector(11 downto 0);
+
 	signal scaler_to_read_int : std_logic_vector(23 downto 0);
+	signal trig_scaler_bits:std_logic_vector(2*num_beams+1 downto 0):=(others=>'0');
+	
 	signal coinc_trig_internal : std_logic;
+	signal coinc_trig_enable:std_logic;
+	signal coinc_trig_scaler_bits : std_logic_vector(9 downto 0);
+	signal coinc_trig_bits_metadata: std_logic_vector(3 downto 0);
+	
 	signal phased_trig_scaler_bits : std_logic_vector(2*num_beams+1 downto 0);
 	signal phased_trig_internal : std_logic;
-	signal trig_scaler_bits:std_logic_vector(2*num_beams+1 downto 0):=(others=>'0');
 	signal phased_trig_enable:std_logic;
-	signal coinc_trig_enable:std_logic;
 	signal phased_trig_bits_metadata : std_logic_vector(num_beams-1 downto 0);
-	signal coinc_trig_bits_metadata: std_logic_vector(3 downto 0);
+	signal power_metadata: std_logic_vector(11 downto 0);
 	
 	--//data chunks
 	signal ram_chunked_data : RAM_CHUNKED_DATA_TYPE;
@@ -192,14 +196,14 @@ architecture rtl of flower_top is
 	end component;
 begin
 
-	proc_trig_types:process(clock_internal_10MHz_loc) 
-	begin
-		if phased_trig_enable = '1' then
-			trig_scaler_bits(2*num_beams+1 downto 0)<=phased_trig_scaler_bits;
-		else 
-			trig_scaler_bits(11 downto 0)<=coinc_trig_scaler_bits;
-		end if;
-	end process;
+	--proc_trig_types:process(clock_internal_10MHz_loc) 
+	--begin
+	--	if phased_trig_enable = '1' then
+	--		trig_scaler_bits(2*num_beams+1 downto 0)<=phased_trig_scaler_bits;
+	--	else 
+	--		trig_scaler_bits(11 downto 0)<=coinc_trig_scaler_bits;
+	--	end if;
+	--end process;
 	
 	proc_get_enable:process(clock_internal_10MHz_loc)
 	begin
@@ -291,6 +295,7 @@ begin
 		pps_i			=> internal_delayed_pps, --gpio_sas_io(0), 
 		phased_trig_bits_metadata_i => phased_trig_bits_metadata,
 		coinc_trig_bits_metadata_i => coinc_trig_bits_metadata,
+		power_i => power_metadata,
 		latched_timestamp_o  => latched_timestamp,
 		status_reg_o	 => event_manager_status_reg,
 		ram_write_o		 => event_ram_write_en,
@@ -420,6 +425,7 @@ begin
 		ch2_data_i	=> ch2_data, 
 		ch3_data_i	=> ch3_data,
 		trig_bits_o => coinc_trig_scaler_bits,
+		coinc_trig_metadata_o => coinc_trig_bits_metadata,
 		coinc_trig_o=> coinc_trig_internal);
 		
 	xPHASED_TRIG : entity work.phased_trigger
@@ -434,7 +440,8 @@ begin
 		ch3_data_i	=> ch3_data,
 		trig_bits_o => phased_trig_scaler_bits,
 		phased_trig_o=> phased_trig_internal,
-		phased_trig_metadata_o => phased_trig_bits_metadata);
+		phased_trig_metadata_o => phased_trig_bits_metadata,
+		power_o=>power_metadata);
 	
 	-----------------------------------------
 	xGLOBAL_TIMING : entity work.pps_timing
@@ -454,7 +461,8 @@ begin
 		clk_i					=> clock_internal_10MHz_loc,
 		gate_i					=> gpio_sas_io(0), --pps from controller
 		reg_i						=> registers,
-		trig_bits_i 	=> trig_scaler_bits,
+		coinc_trig_bits_i 	=> coinc_trig_scaler_bits,
+		phased_trig_bits_i 	=> phased_trig_scaler_bits,
 		pps_cycle_counter_i	=> internal_pps_cycle_counter,
 		scaler_to_read_o  => scaler_to_read_int);
 	--///////////////////////////////////////	

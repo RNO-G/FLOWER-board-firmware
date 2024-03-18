@@ -41,8 +41,9 @@ port(
 		ch2_data_i	:	in		std_logic_vector(31 downto 0);
 		ch3_data_i	:	in		std_logic_vector(31 downto 0);
 		
-		trig_bits_o : 	out	std_logic_vector(11 downto 0); --for scalers
-		coinc_trig_o: 	out	std_logic --trigger
+		trig_bits_o : 	out	std_logic_vector(9 downto 0); --for scalers
+		coinc_trig_o: 	out	std_logic; --trigger
+		coinc_trig_metadata_o: out std_logic_vector(3 downto 0)
 		);
 end simple_trigger;
 
@@ -70,7 +71,7 @@ signal servo_clear			: std_logic_vector(3 downto 0);
 signal trig_counter			: threshold_array; --/not a threshold, but data type works
 signal servo_counter			: threshold_array;
 
-signal trig_array_for_scalers : std_logic_vector(11 downto 0); --//on clk_data_i
+signal trig_array_for_scalers : std_logic_vector(9 downto 0); --//on clk_data_i
 
 signal coincidence_trigger_reg : std_logic_vector(1 downto 0);
 signal coincidence_trigger : std_logic; --actual trigger, one clk_data_i cycle
@@ -257,6 +258,7 @@ begin
 			to_integer(unsigned(channel_trig_reg(2))) + to_integer(unsigned(channel_trig_reg(3))) > to_integer(unsigned(coinc_require_int)) then
 			
 			coincidence_trigger_reg(0) <= '1';
+			coinc_trig_metadata_o<=channel_trig_reg(3)(0)&channel_trig_reg(2)(0)&channel_trig_reg(1)(0)&channel_trig_reg(0)(0);
 		
 		else
 			coincidence_trigger_reg(0) <= '0';
@@ -334,14 +336,14 @@ xVPPMODESYNC : signal_sync
 	SignalIn_clkA	=> registers_i(to_integer(unsigned(coinc_trig_param_reg)))(16), --vppmode
 	SignalOut_clkB	=> vppmode_int);
 --------------
-trig_array_for_scalers <= "00" & servo_clear(3) & servo_clear(2) &
+trig_array_for_scalers <=  servo_clear(3) & servo_clear(2) &
 									servo_clear(1) & servo_clear(0) & coincidence_servo &
 									trig_clear(3) & trig_clear(2) & trig_clear(1) & 
 									trig_clear(0) & coincidence_trigger;
 ----TRIGGER OUT!!
 coinc_trig_o <= coincidence_trigger_reg(0); --use the variable-width reg signal instead of the coincidence_trigger to save 1 clk cycle of delay
 --------------
-TrigToScalers	:	 for i in 0 to 11 generate
+TrigToScalers	:	 for i in 0 to 9 generate
 	xTRIGSYNC : flag_sync
 	port map(
 		clkA 			=> clk_data_i,

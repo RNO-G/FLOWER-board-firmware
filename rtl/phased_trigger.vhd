@@ -42,7 +42,8 @@ port(
 		
 		trig_bits_o : 	out	std_logic_vector(2*(num_beams+1)-1 downto 0); --for scalers
 		phased_trig_o: 	out	std_logic; --trigger
-		phased_trig_metadata_o: out std_logic_vector(num_beams-1 downto 0)
+		phased_trig_metadata_o: out std_logic_vector(num_beams-1 downto 0);
+		power_o: out std_logic_vector(11 downto 0)
 		);
 end phased_trigger;
 
@@ -96,6 +97,7 @@ signal trig_beam_thresh : power_array:=(others=>(others=>'0')) ; --trigger thres
 signal servo_beam_thresh : power_array:=(others=>(others=>'0')) ;--(others=>(others=>'0')) --servo thresholds for all beams
 signal power_sum : power_array; --power levels for all beams
 signal avg_power: power_array;
+signal latched_power_out: power_array;
 
 signal triggering_beam: std_logic_vector(num_beams-1 downto 0):=(others=>'0');
 signal servoing_beam: std_logic_vector(num_beams-1 downto 0):=(others=>'0');
@@ -137,6 +139,7 @@ signal is_there_a_servo: std_logic_vector(num_beams-1 downto 0);
 
 signal trig_bits_metadata: std_logic_vector(num_beams-1 downto 0);
 
+
 --------------
 component signal_sync is
 port(
@@ -169,7 +172,6 @@ begin
 		for i in 0 to 3 loop
 			streaming_data(0,i)<=signed(ch0_data_i(8*(i+1)-1 downto 8*(i)))-baseline;
 		end loop;
-		
 		
 		--ch 1
 		for i in 4 to streaming_buffer_length-1 loop
@@ -214,8 +216,8 @@ begin
 					interp_data(i,j) <= interp_buffer(i,j)(7 downto 0);
 				else
 					interp_buffer(i,j)<=(streaming_data(i,j/4)+(streaming_data(i,j/4+1)-streaming_data(i,j/4))*(j mod interp_factor)/interp_factor);--would be nice if didn't have to buffer this
-					interp_data(i,j)(6 downto 0)<=interp_buffer(i,j)(6 downto 0);
-					interp_data(i,j)(7)<=interp_buffer(i,j)(7);
+					interp_data(i,j)(6 downto 0)<=interp_buffer(i,j)(6 downto 0); --truncate using lower bits
+					interp_data(i,j)(7)<=interp_buffer(i,j)(15); --keep the sign bit
 				end if;
 			end loop;
 		end loop;
@@ -228,10 +230,10 @@ begin
 		for i in 0 to num_beams-1 loop --loop over beams
 			for j in 0 to phased_sum_length-1 loop
 					
-				phased_beam_waves(i,j) <= B"00"&(interp_data(0,beam_delays(i,0)-(j-3))
+				phased_beam_waves(i,j) <= resize(interp_data(0,beam_delays(i,0)-(j-3))
 					+interp_data(1,beam_delays(i,1)-(j-3))
 					+interp_data(2,beam_delays(i,2)-(j-3))
-					+interp_data(3,beam_delays(i,3)-(j-3)));
+					+interp_data(3,beam_delays(i,3)-(j-3)),10);--maybe resize instead of concatenate will tranfer the sign correctly
 
 			end loop;
 		end loop;
@@ -248,7 +250,7 @@ begin
 	elsif rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
 		for i in 0 to num_beams-1 loop
 			for j in 0 to phased_sum_length-1 loop
-				phased_power(i,j)<=unsigned(phased_beam_waves(i,j)*phased_beam_waves(i,j))(phased_sum_power_bits-1 downto 0);
+				phased_power(i,j)<=unsigned(abs(phased_beam_waves(i,j))*abs(phased_beam_waves(i,j)));
 			end loop;
 		end loop;
 	
@@ -296,7 +298,7 @@ begin
 	elsif rising_edge(clk_data_i) then
 		--loop over the beams and this is a big mess
 		for i in 0 to num_beams-1 loop
-			phased_trig_metadata_o<=triggering_beam;
+			
 			if trig_counter(i) = coinc_window_int then
 				trig_clear(i) <= '1';
 			else
@@ -326,6 +328,9 @@ begin
 			if avg_power(i)>trig_beam_thresh(i) then
 				triggering_beam(i)<='1';
 				beam_trigger_reg(i)(0)<='1';
+				latched_power_out(i)<=avg_power(i);
+				
+				
 			else
 				triggering_beam(i)<='0';
 				beam_trigger_reg(i)(0)<='0';
@@ -367,6 +372,7 @@ begin
 		
 		if (to_integer(unsigned(triggering_beam AND internal_trigger_beam_mask))>0) and (internal_phased_trig_en='1') then
 			phased_trigger_reg(0)<='1';
+
 		else
 			phased_trigger_reg(0)<='0';
 		end if;
@@ -378,9 +384,11 @@ begin
 		
 		phased_trigger_reg(1)<=phased_trigger_reg(0);
 		phased_servo_reg(1)<=phased_servo_reg(0);
-		
+
 		if phased_trigger_reg="01" then
 			phased_trigger<='1';
+			power_o<=std_logic_vector(latched_power_out(0)(11 downto 0));
+			phased_trig_metadata_o<=triggering_beam;
 		else
 			phased_trigger<='0';
 		end if;
