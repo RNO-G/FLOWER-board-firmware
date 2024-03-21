@@ -84,9 +84,9 @@ architecture rtl of flower_top is
 	--//FIRMWARE DETAILS--
 	constant fw_version_maj	: std_logic_vector(7 downto 0)  := x"00";
 	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"09";
-	constant fw_year			: std_logic_vector(11 downto 0) := x"7E7"; 
-	constant fw_month			: std_logic_vector(3 downto 0)  := x"3"; 
-	constant fw_day			: std_logic_vector(7 downto 0)  := x"12";
+	constant fw_year			: std_logic_vector(11 downto 0) := x"7E8";
+	constant fw_month			: std_logic_vector(3 downto 0)  := x"3";
+	constant fw_day			: std_logic_vector(7 downto 0)  := x"14";
 	---------------------------------------
 	--//the following signals to/from Clock_Manager--
 	signal clock_internal_10MHz_sys		:	std_logic;	
@@ -167,7 +167,7 @@ architecture rtl of flower_top is
 	signal phased_trig_internal : std_logic;
 	signal phased_trig_enable:std_logic;
 	signal phased_trig_bits_metadata : std_logic_vector(num_beams-1 downto 0);
-	signal power_metadata: std_logic_vector(11 downto 0);
+	signal power_metadata: std_logic_vector(22 downto 0);
 	
 	--//data chunks
 	signal ram_chunked_data : RAM_CHUNKED_DATA_TYPE;
@@ -195,15 +195,6 @@ architecture rtl of flower_top is
 		data_out			: out std_logic_Vector(3 downto 0));
 	end component;
 begin
-
-	--proc_trig_types:process(clock_internal_10MHz_loc) 
-	--begin
-	--	if phased_trig_enable = '1' then
-	--		trig_scaler_bits(2*num_beams+1 downto 0)<=phased_trig_scaler_bits;
-	--	else 
-	--		trig_scaler_bits(11 downto 0)<=coinc_trig_scaler_bits;
-	--	end if;
-	--end process;
 	
 	proc_get_enable:process(clock_internal_10MHz_loc)
 	begin

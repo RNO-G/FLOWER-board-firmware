@@ -40,7 +40,7 @@ port(
 		pps_i			:	in		std_logic;
 		phased_trig_bits_metadata_i: in std_logic_vector(num_beams-1 downto 0);
 		coinc_trig_bits_metadata_i: in std_logic_vector(3 downto 0);
-		power_i: in std_logic_vector(11 downto 0);
+		power_i: in std_logic_vector(22 downto 0);
 		latched_timestamp_o : buffer std_logic_vector(47 downto 0);
 		status_reg_o : out 	std_logic_vector(23 downto 0);
 		ram_write_o			:	out	std_logic; -- ram sits in ADC controller for now, control signal
@@ -244,7 +244,7 @@ begin
 		end case;
 		------------------------------------
 		--latch event metadata using write busy signaling
-		if internal_write_busy = "01" then
+		if internal_write_busy = "01" then		
 			internal_metadata_array(0) <= internal_event_counter + 1; -- +1 to maintain same value for event and trig counter
 			internal_metadata_array(1) <= internal_trigger_counter;
 			internal_metadata_array(2) <= internal_pps_counter;
@@ -253,11 +253,12 @@ begin
 			internal_metadata_array(5) <= x"0" & "000" & pps_i & x"00" & x"0" & internal_trigger_type;
 			internal_metadata_array(6)(3 downto 0) <= coinc_trig_bits_metadata_i;
 			internal_metadata_array(7)(num_beams-1 downto 0) <= phased_trig_bits_metadata_i;
-			internal_metadata_array(8)(11 downto 0) <= power_i;
+			internal_metadata_array(8)(22 downto 0) <= power_i;
 		end if;
 	end if;
 end process;	
 ------------------------------------
+	
 proc_clk_meta : process(clk_i)
 begin
 	if rising_edge(clk_i) then

@@ -129,7 +129,7 @@ begin
 		registers_io(41) <= x"000000"; --//scaler-to-read
 		
 		--//
-		registers_io(61) <= x"000000"; --//FLOWER trigger enables [0]->pps trig [8]->coinc_trig [16]->ext trig enable
+		registers_io(61) <= x"000000"; --//FLOWER trigger enables [0]->pps trig, [8]->coinc_trig, [9]->phased trig, [16]->ext trig enable
 		registers_io(62) <= x"000000"; 
 		registers_io(63) <= x"000000"; 
 		
@@ -144,8 +144,8 @@ begin
 		registers_io(74) <= x"000000"; --//surface readout select: toggle LSB to readout surface, when LSB=0 (default)->deep readout
 
 		--//masking + trigger configurations
-		registers_io(48) <= x"0000FF";   --// channel masking [48]
-		registers_io(80) <= x"FFFFFF";   --// beam masks for trigger [80]
+		registers_io(95) <= x"000000";   --// coinc trig channel masking [95]
+		registers_io(80) <= x"000000";   --// beam masks for trigger [80]
 		registers_io(81) <= x"0001FF";   --// trig holdoff - lower 16 bits [81]
 		registers_io(82) <= x"000300";	--// phased trigger/beam enables [82]
 		registers_io(75) <= x"00FF00";   --// external trigger input configuration [75]

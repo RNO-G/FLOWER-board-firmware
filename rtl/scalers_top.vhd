@@ -73,7 +73,7 @@ begin
 -------------------------------------------------------------------------------
 --proc_assign_scalers_to_metadata : running_scalers_o <= internal_scaler_array(32) & internal_scaler_array(0);
 -------------------------------------------------------------------------------
---//scaler 63 is the `scaler pps'
+
 --//scalers 0-9
 CoincTrigScalers1Hz : for i in 0 to 9 generate
 	xCOINC1Hz : scaler
@@ -86,7 +86,7 @@ CoincTrigScalers1Hz : for i in 0 to 9 generate
 end generate;
 --//scalers 10-19
 CoincTrigScalers1HzGated : for i in 0 to 9 generate
-	xCOINC1Hz : scaler
+	xCOINCGATED1Hz : scaler
 	port map(
 		rst_i => rst_i,
 		clk_i => clk_i,
@@ -104,14 +104,9 @@ CoincTrigScalers100Hz : for i in 0 to 9 generate
 		count_i => coinc_trig_bits_i(i),
 		scaler_o => internal_scaler_array(i+20));
 end generate;
-proc_scaler_pps : process(clk_i, refresh_clk_1Hz)
-begin
-	if rising_edge(clk_i) and refresh_clk_1Hz = '1' then
-		internal_scaler_array(30) <= internal_scaler_array(30) + 1;
-	end if;
-end process;
---//scalers 0-11
-PhasedTrigScalers1Hz : for i in 1 to 2*(num_beams+1)-1 generate
+
+--//scalers 32-66
+PhasedTrigScalers1Hz : for i in 0 to 2*(num_beams+1)-1 generate
 	xPHASED1Hz : scaler
 	port map(
 		rst_i => rst_i,
@@ -120,9 +115,9 @@ PhasedTrigScalers1Hz : for i in 1 to 2*(num_beams+1)-1 generate
 		count_i => phased_trig_bits_i(i),
 		scaler_o => internal_scaler_array(i+32));
 end generate;
---//scalers 12-23
+--//scalers 66-99
 PhasedTrigScalers1HzGated : for i in 0 to 2*(num_beams+1)-1 generate
-	xPHASED1Hz : scaler
+	xPHASEDGATED1Hz : scaler
 	port map(
 		rst_i => rst_i,
 		clk_i => clk_i,
@@ -130,7 +125,7 @@ PhasedTrigScalers1HzGated : for i in 0 to 2*(num_beams+1)-1 generate
 		count_i => phased_trig_bits_i(i) and gate_i,
 		scaler_o => internal_scaler_array(integer(i+2*(num_beams+1))+32));
 end generate;
---//scalers 24-35
+--//scalers 100-133
 PhasedTrigScalers100Hz : for i in 0 to 2*(num_beams+1)-1 generate
 	xPHASED100Hz : scaler
 	port map(
@@ -140,6 +135,14 @@ PhasedTrigScalers100Hz : for i in 0 to 2*(num_beams+1)-1 generate
 		count_i => phased_trig_bits_i(i),
 		scaler_o => internal_scaler_array(integer(i+4*(num_beams+1))+32));
 end generate;
+-------------------------------------	
+proc_scaler_pps : process(clk_i, refresh_clk_1Hz)
+begin
+	if rising_edge(clk_i) and refresh_clk_1Hz = '1' then
+		internal_scaler_array(30) <= internal_scaler_array(30) + 1;
+	end if;
+end process;
+
 -------------------------------------		
 proc_save_scalers : process(rst_i, clk_i, reg_i)
 begin
@@ -155,10 +158,11 @@ begin
 		latched_pps_cycle_counter <= pps_cycle_counter_i; -- latch the pps counter in same fashion as other scalers
 		
 	elsif rising_edge(clk_i) then
-		if unsigned(reg_i(41)(7 downto 0))<num_scalers then
+		if to_integer(unsigned(reg_i(41)(7 downto 0)))<num_scalers then
 			scaler_to_read_o<=latched_scaler_array(to_integer(unsigned(reg_i(41)(7 downto 0)))+1)&latched_scaler_array(to_integer(unsigned(reg_i(41)(7 downto 0))));
 		else
-			scaler_to_read_o<=latched_scaler_array(1)&latched_scaler_array(0);
+			--scaler_to_read_o<=latched_scaler_array(1)&latched_scaler_array(0);
+			scaler_to_read_o<=x"ffffff";
 		end if;
 	end if;
 end process;
