@@ -24,8 +24,8 @@ generic(
 		ENABLE_PHASED_TRIG : std_logic := '1';
 		trigger_enable_reg_adr : std_logic_vector(7 downto 0) := x"3D";
 		phased_trig_reg_base	: std_logic_vector(7 downto 0):= x"50";
-		phased_trig_param_reg	: std_logic_vector(7 downto 0):= x"80";
-		address_reg_pps_delay: std_logic_vector(7 downto 0) := x"5E"
+		address_reg_pps_delay: std_logic_vector(7 downto 0) := x"5E";
+		phased_trig_param_reg	: std_logic_vector(7 downto 0):= x"80"
 		);
 
 port(
@@ -48,13 +48,13 @@ end phased_trigger;
 
 architecture rtl of phased_trigger is
 
-constant streaming_buffer_length: integer := 18;
+constant streaming_buffer_length: integer := 20;
 constant interp_factor: integer := 4;
 constant interp_data_length: integer := interp_factor*(streaming_buffer_length-1)+1;
-constant window_length:integer := 8;
+constant window_length:integer := 16;
 constant baseline: signed(7 downto 0) := x"80";
 constant phased_sum_bits: integer := 10;
-constant phased_sum_length: integer := 8;
+constant phased_sum_length: integer := 16; --not sure if it should be 8 or 16. longer windows smooths things. shorter window gives higher peak
 constant phased_sum_power_bits: integer := 20;
 constant num_power_bits: integer := 23;
 constant power_sum_bits:	integer := 23; --actually 25 but this fits into the io regs
@@ -62,10 +62,15 @@ constant input_power_thesh_bits:	integer := 12;
 constant power_length: integer := 12;
 constant power_low_bit: integer := 0;
 constant power_high_bit: integer := power_low_bit+power_length-1;
+constant num_div: integer := integer(log2(real(phased_sum_length)));
+constant pad_zeros: std_logic_vector(num_div-1 downto 0):=(others=>'0');
 
 type antenna_delays is array (num_beams-1 downto 0,num_channels-1 downto 0) of integer;
 --constant beam_delays : antenna_delays := ((12,11,10,9),(45,45,45,45)); --it will optimize away a lot of the streaming buffer if these numbers are small
 constant beam_delays : antenna_delays := (others=>(others=>32)); --try to force only beam 0 to trigger
+
+--(7,26,47,68),(7,25,45,65),(7,24,43,61),(7,23,40,57),(7,21,37,53),(7,20,34,48),(7,18,31,43),(7,16,28,37),(7,15,24,32),(7,13,21,27),(7,11,18,21),(7,10,15,17),(7,8,12,12),(7,7,9,8),(9,8,9,7),(12,10,10,7),
+
 
 --constant beam_delays : antenna_delays := ((4,23,44,65),(4,22,42,62),(4,21,40,58),(4,20,37,54),(4,18,34,50),(4,17,31,45),(4,15,28,40),(4,13,25,34),(4,12,21,29),(4,10,18,24),(4,8,15,18),(4,7,12,14),(4,5,9,9),(4,4,6,5),(6,5,6,4),(9,7,7,4));
 -- 8 beams!!! signal beam_delays: antenna_delays:=(4,23,44,65),(4,21,40,58),(4,18,34,48),(4,14,27,37),(4,11,19,26),(4,7,12,15),(4,4,6,5),(9,7,7,4));
@@ -130,9 +135,6 @@ signal internal_trigger_channel_mask : std_logic_vector(7 downto 0);
 signal internal_trigger_beam_mask : std_logic_vector(num_beams-1 downto 0);
 signal bits_for_trigger : std_logic_vector(num_beams-1 downto 0);
 signal trig_array_for_scalars : std_logic_vector (2*(num_beams+1)-1 downto 0);
-
-constant num_div: integer := integer(log2(real(phased_sum_length)));
-constant pad_zeros: std_logic_vector(num_div-1 downto 0):=(others=>'0');
 
 constant coinc_window_int	: integer := 1; --//num of clk_data_i periods
 
@@ -232,10 +234,10 @@ begin
 		for i in 0 to num_beams-1 loop --loop over beams
 			for j in 0 to phased_sum_length-1 loop
 					
-				phased_beam_waves(i,j) <= resize(interp_data(0,beam_delays(i,0)-(j-3))
-					+interp_data(1,beam_delays(i,1)-(j-3))
-					+interp_data(2,beam_delays(i,2)-(j-3))
-					+interp_data(3,beam_delays(i,3)-(j-3)),10);--maybe resize instead of concatenate will tranfer the sign correctly
+				phased_beam_waves(i,j) <= resize(interp_data(0,beam_delays(i,0)-(j-7))
+					+interp_data(1,beam_delays(i,1)-(j-7))
+					+interp_data(2,beam_delays(i,2)-(j-7))
+					+interp_data(3,beam_delays(i,3)-(j-7)),10);--maybe resize instead of concatenate will tranfer the sign correctly
 
 			end loop;
 		end loop;
@@ -269,8 +271,21 @@ begin
 		for i in 0 to num_beams-1 loop
 			--power_sum(i)<=resize(phased_power(i,0)+phased_power(i,1),power_sum_bits);
 				
-			power_sum(i)<=B"000"&(phased_power(i,0)+phased_power(i,1)
-				+phased_power(i,2)+phased_power(i,3));
+			power_sum(i)<=resize(phased_power(i,0)+phased_power(i,1)+phased_power(i,2)+phased_power(i,3)
+				+phased_power(i,4)+phased_power(i,5)+phased_power(i,6)+phased_power(i,7)
+				+phased_power(i,8)+phased_power(i,9)+phased_power(i,10)+phased_power(i,11)
+				+phased_power(i,12)+phased_power(i,13)+phased_power(i,14)+phased_power(i,15),23);
+			
+
+
+			--power_sum(i)<=power_sum(i)+phased_power(i,j); --add the rest
+				--maybe it compiles correctly to add all of them but im lazy to write them all
+				
+				
+				
+				
+			--power_sum(i)<=phased_power(i,0)+phased_power(i,1)
+			--	+phased_power(i,2)+phased_power(i,3); --this isnt right																								
 				
 				
 			avg_power(i)(power_sum_bits-1 downto power_sum_bits-num_div)<=unsigned(pad_zeros);
@@ -446,7 +461,7 @@ TRIGBEAMMASK : for i in 0 to num_beams-1 generate --beam masks. 1 == on
 end generate;
 
 ------------
-
+--these were causing issues
 --trig_array_for_scalars(2*num_beams+1 downto num_beams +2)<=servo_clear(num_beams-1 downto 0);
 --trig_array_for_scalars(num_beams+1)<=phased_servo;
 --trig_array_for_scalars(num_beams downto 1)<=trig_clear(num_beams-1 downto 0);
@@ -457,11 +472,16 @@ end generate;
 --trig_array_for_scalars(num_beams downto 1)<=triggering_beam(num_beams-1 downto 0);
 --trig_array_for_scalars(0)<=phased_trigger;
 
-
-
 ----TRIGGER OUT!!
 phased_trig_o <= phased_trigger_reg(0); --phased trigger for 0->1 transition. phased_trigger_reg(0) for absolute trigger 
 --------------
+trigscaler: flag_sync
+	port map(
+		clkA 			=> clk_data_i,
+		clkB			=> clk_i,
+		in_clkA		=> phased_trigger,
+		busy_clkA	=> open,
+		out_clkB		=> trig_bits_o(0));
 
 TrigToScalers	:	 for i in 0 to num_beams-1 generate 
 	xTRIGSYNC : flag_sync
@@ -470,28 +490,8 @@ TrigToScalers	:	 for i in 0 to num_beams-1 generate
 		clkB			=> clk_i,
 		in_clkA		=> triggering_beam(i) and internal_trigger_beam_mask(i),
 		busy_clkA	=> open,
-		out_clkB		=> trig_bits_o(i));
+		out_clkB		=> trig_bits_o(i+1));
 end generate TrigToScalers;
-
-
-trigscaler: flag_sync
-	port map(
-		clkA 			=> clk_data_i,
-		clkB			=> clk_i,
-		in_clkA		=> phased_trigger,
-		busy_clkA	=> open,
-		out_clkB		=> trig_bits_o(16));
-
-
-ServoToScalers	:	 for i in 0 to num_beams-1 generate 
-	xSERVOSYNC : flag_sync
-	port map(
-		clkA 			=> clk_data_i,
-		clkB			=> clk_i,
-		in_clkA		=> servoing_beam(i) and internal_trigger_beam_mask(i),
-		busy_clkA	=> open,
-		out_clkB		=> trig_bits_o(i+17));
-end generate ServoToScalers;
 
 
 servoscaler: flag_sync
@@ -500,8 +500,17 @@ servoscaler: flag_sync
 		clkB			=> clk_i,
 		in_clkA		=> phased_servo,
 		busy_clkA	=> open,
-		out_clkB		=> trig_bits_o(33));
+		out_clkB		=> trig_bits_o(17));
 
+ServoToScalers	:	 for i in 0 to num_beams-1 generate 
+	xSERVOSYNC : flag_sync
+	port map(
+		clkA 			=> clk_data_i,
+		clkB			=> clk_i,
+		in_clkA		=> servoing_beam(i) and internal_trigger_beam_mask(i),
+		busy_clkA	=> open,
+		out_clkB		=> trig_bits_o(i+18));
+end generate ServoToScalers;
 
 
 

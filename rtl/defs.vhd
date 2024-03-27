@@ -104,11 +104,6 @@ type average_power_16samp_type is array(define_num_beams-1 downto 0) of std_logi
 constant num_beams: integer:=16;
 constant num_channels: integer:=4;
 
-
---type antenna_delays is array (num_beams-1 downto 0,num_channels-1 downto 0) of integer;
---constant beam_delays : antenna_delays := ((12,11,10,9),(16,16,16,16));
---constant beam_delays : antenna_delays := (others=>(others=>16));
-
 ----------------------------------------------------------------------
 end defs;
 

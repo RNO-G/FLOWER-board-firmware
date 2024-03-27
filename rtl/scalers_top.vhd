@@ -42,7 +42,7 @@ type coinc_scaler_array_type is array(coinc_num_scalers-1 downto 0) of std_logic
 signal phased_internal_scaler_array : phased_scaler_array_type := (others=>(others=>'0'));
 signal coinc_internal_scaler_array : coinc_scaler_array_type := (others=>(others=>'0'));
 
-constant num_scalers: integer:=phased_num_scalers+coinc_num_scalers+2;
+constant num_scalers: integer:=phased_num_scalers+coinc_num_scalers+6;
 type scaler_array_type is array(num_scalers-1 downto 0) of std_logic_vector(scaler_width-1 downto 0);
 signal internal_scaler_array:scaler_array_type;
 signal latched_scaler_array : scaler_array_type; --//assigned after refresh pulse
@@ -74,7 +74,27 @@ begin
 --proc_assign_scalers_to_metadata : running_scalers_o <= internal_scaler_array(32) & internal_scaler_array(0);
 -------------------------------------------------------------------------------
 
---//scalers 0-9
+
+--//scaler 0
+proc_scaler_pps : process(clk_i, refresh_clk_1Hz)
+begin
+	if rising_edge(clk_i) and refresh_clk_1Hz = '1' then
+		internal_scaler_array(0) <= internal_scaler_array(0) + 1;
+	end if;
+end process;
+
+--//scalers 2,3
+proc_assign_pps_counter : process(clk_i) --maybe use the 1hz refresh clock, idk
+begin 
+	if rising_edge(clk_i) then
+		internal_scaler_array(2) <= pps_cycle_counter_i(11 downto 0);
+		internal_scaler_array(3) <= pps_cycle_counter_i(23 downto 12);
+		internal_scaler_array(4) <= pps_cycle_counter_i(35 downto 24);
+		internal_scaler_array(5) <= pps_cycle_counter_i(47 downto 36);
+	end if;
+end process;
+
+--//scalers 6-15
 CoincTrigScalers1Hz : for i in 0 to 9 generate
 	xCOINC1Hz : scaler
 	port map(
@@ -82,9 +102,9 @@ CoincTrigScalers1Hz : for i in 0 to 9 generate
 		clk_i => clk_i,
 		refresh_i => refresh_clk_1Hz,
 		count_i => coinc_trig_bits_i(i),
-		scaler_o => internal_scaler_array(i));
+		scaler_o => internal_scaler_array(i+6));
 end generate;
---//scalers 10-19
+--//scalers 16-25
 CoincTrigScalers1HzGated : for i in 0 to 9 generate
 	xCOINCGATED1Hz : scaler
 	port map(
@@ -92,9 +112,9 @@ CoincTrigScalers1HzGated : for i in 0 to 9 generate
 		clk_i => clk_i,
 		refresh_i => refresh_clk_1Hz,
 		count_i => coinc_trig_bits_i(i) and gate_i,
-		scaler_o => internal_scaler_array(i+10));
+		scaler_o => internal_scaler_array(i+16));
 end generate;
---//scalers 20-29
+--//scalers 26-35
 CoincTrigScalers100Hz : for i in 0 to 9 generate
 	xCOINC100Hz : scaler
 	port map(
@@ -102,10 +122,10 @@ CoincTrigScalers100Hz : for i in 0 to 9 generate
 		clk_i => clk_i,
 		refresh_i => refresh_clk_100Hz,
 		count_i => coinc_trig_bits_i(i),
-		scaler_o => internal_scaler_array(i+20));
+		scaler_o => internal_scaler_array(i+26));
 end generate;
 
---//scalers 32-66
+--//scalers 36-69
 PhasedTrigScalers1Hz : for i in 0 to 2*(num_beams+1)-1 generate
 	xPHASED1Hz : scaler
 	port map(
@@ -113,9 +133,9 @@ PhasedTrigScalers1Hz : for i in 0 to 2*(num_beams+1)-1 generate
 		clk_i => clk_i,
 		refresh_i => refresh_clk_1Hz,
 		count_i => phased_trig_bits_i(i),
-		scaler_o => internal_scaler_array(i+32));
+		scaler_o => internal_scaler_array(i+36));
 end generate;
---//scalers 66-99
+--//scalers 70-103
 PhasedTrigScalers1HzGated : for i in 0 to 2*(num_beams+1)-1 generate
 	xPHASEDGATED1Hz : scaler
 	port map(
@@ -123,9 +143,9 @@ PhasedTrigScalers1HzGated : for i in 0 to 2*(num_beams+1)-1 generate
 		clk_i => clk_i,
 		refresh_i => refresh_clk_1Hz,
 		count_i => phased_trig_bits_i(i) and gate_i,
-		scaler_o => internal_scaler_array(integer(i+2*(num_beams+1))+32));
+		scaler_o => internal_scaler_array(integer(i+2*(num_beams+1))+36));
 end generate;
---//scalers 100-133
+--//scalers 105-137
 PhasedTrigScalers100Hz : for i in 0 to 2*(num_beams+1)-1 generate
 	xPHASED100Hz : scaler
 	port map(
@@ -133,15 +153,9 @@ PhasedTrigScalers100Hz : for i in 0 to 2*(num_beams+1)-1 generate
 		clk_i => clk_i,
 		refresh_i => refresh_clk_100Hz,
 		count_i => phased_trig_bits_i(i),
-		scaler_o => internal_scaler_array(integer(i+4*(num_beams+1))+32));
+		scaler_o => internal_scaler_array(integer(i+4*(num_beams+1))+36));
 end generate;
 -------------------------------------	
-proc_scaler_pps : process(clk_i, refresh_clk_1Hz)
-begin
-	if rising_edge(clk_i) and refresh_clk_1Hz = '1' then
-		internal_scaler_array(30) <= internal_scaler_array(30) + 1;
-	end if;
-end process;
 
 -------------------------------------		
 proc_save_scalers : process(rst_i, clk_i, reg_i)
@@ -155,11 +169,12 @@ begin
 	
 	elsif rising_edge(clk_i) and reg_i(40)(0) = '1' then
 		latched_scaler_array <= internal_scaler_array;
-		latched_pps_cycle_counter <= pps_cycle_counter_i; -- latch the pps counter in same fashion as other scalers
+		--latched_pps_cycle_counter <= pps_cycle_counter_i; -- latch the pps counter in same fashion as other scalers
 		
 	elsif rising_edge(clk_i) then
+	
 		if to_integer(unsigned(reg_i(41)(7 downto 0)))<num_scalers then
-			scaler_to_read_o<=latched_scaler_array(to_integer(unsigned(reg_i(41)(7 downto 0)))+1)&latched_scaler_array(to_integer(unsigned(reg_i(41)(7 downto 0))));
+			scaler_to_read_o<=latched_scaler_array(2*to_integer(unsigned(reg_i(41)(7 downto 0)))+1)&latched_scaler_array(2*to_integer(unsigned(reg_i(41)(7 downto 0))));
 		else
 			--scaler_to_read_o<=latched_scaler_array(1)&latched_scaler_array(0);
 			scaler_to_read_o<=x"ffffff";
