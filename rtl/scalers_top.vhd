@@ -83,7 +83,7 @@ begin
 	end if;
 end process;
 
---//scalers 2,3
+--//scalers 2,3,4,5
 proc_assign_pps_counter : process(clk_i) --maybe use the 1hz refresh clock, idk
 begin 
 	if rising_edge(clk_i) then

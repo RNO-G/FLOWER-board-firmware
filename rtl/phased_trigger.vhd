@@ -47,23 +47,25 @@ port(
 end phased_trigger;
 
 architecture rtl of phased_trigger is
-
-constant streaming_buffer_length: integer := 20;
+constant streaming_buffer_length: integer := 8;
 constant interp_factor: integer := 4;
-constant interp_data_length: integer := interp_factor*(streaming_buffer_length-1)+1;
+constant interp_data_length: integer := interp_factor*(20-1)+1;--interp_factor*(streaming_buffer_length-1)+1;
 constant window_length:integer := 16;
 constant baseline: signed(7 downto 0) := x"80";
-constant phased_sum_bits: integer := 10;
-constant phased_sum_length: integer := 16; --not sure if it should be 8 or 16. longer windows smooths things. shorter window gives higher peak
-constant phased_sum_power_bits: integer := 20;
-constant num_power_bits: integer := 23;
-constant power_sum_bits:	integer := 23; --actually 25 but this fits into the io regs
+constant phased_sum_bits: integer := 8;
+constant phased_sum_length: integer := 24; --not sure if it should be 8 or 16. longer windows smooths things. shorter window gives higher peak
+constant phased_sum_power_bits: integer := 16;
+constant num_power_bits: integer := 24;
+constant power_sum_bits:	integer := 24; --actually 25 but this fits into the io regs
 constant input_power_thesh_bits:	integer := 12;
 constant power_length: integer := 12;
-constant power_low_bit: integer := 0;
+constant power_low_bit: integer := 0; --might need to be 1. tried making it adjustable but didnt work. lab based sig starts triggering at 4000 threshold
 constant power_high_bit: integer := power_low_bit+power_length-1;
-constant num_div: integer := integer(log2(real(phased_sum_length)));
+constant num_div: integer := 4;--integer(log2(real(phased_sum_length)));
 constant pad_zeros: std_logic_vector(num_div-1 downto 0):=(others=>'0');
+--constant threshold_offset: integer:= 3000; --if this works I can add it to the registers. might not work
+
+signal threshold_offset: unsigned(11 downto 0):=x"bb8";
 
 type antenna_delays is array (num_beams-1 downto 0,num_channels-1 downto 0) of integer;
 --constant beam_delays : antenna_delays := ((12,11,10,9),(45,45,45,45)); --it will optimize away a lot of the streaming buffer if these numbers are small
@@ -75,6 +77,7 @@ constant beam_delays : antenna_delays := (others=>(others=>32)); --try to force 
 --constant beam_delays : antenna_delays := ((4,23,44,65),(4,22,42,62),(4,21,40,58),(4,20,37,54),(4,18,34,50),(4,17,31,45),(4,15,28,40),(4,13,25,34),(4,12,21,29),(4,10,18,24),(4,8,15,18),(4,7,12,14),(4,5,9,9),(4,4,6,5),(6,5,6,4),(9,7,7,4));
 -- 8 beams!!! signal beam_delays: antenna_delays:=(4,23,44,65),(4,21,40,58),(4,18,34,48),(4,14,27,37),(4,11,19,26),(4,7,12,15),(4,4,6,5),(9,7,7,4));
 --honestly might be useful to add a beam of zero delay. the above have cable delays included into the calc
+
 
 type interpolated_data_array is array(3 downto 0, interp_data_length-1 downto 0) of signed(7 downto 0);
 signal interp_data: interpolated_data_array;
@@ -91,6 +94,9 @@ signal input_servo_thresh : thresh_input;
 
 type streaming_data_array is array(3 downto 0, streaming_buffer_length-1 downto 0) of signed(7 downto 0);
 signal streaming_data : streaming_data_array := (others=>(others=>(others=>'0'))); --pipeline data
+
+type phased_arr_buff is array (num_beams-1 downto 0,phased_sum_length-1 downto 0) of signed(phased_sum_bits+1 downto 0);-- range 0 to 2**phased_sum_bits-1; --phased sum... log2(16*8)=7bits
+signal phased_beam_waves_buff: phased_arr_buff;
 
 
 type phased_arr is array (num_beams-1 downto 0,phased_sum_length-1 downto 0) of signed(phased_sum_bits-1 downto 0);-- range 0 to 2**phased_sum_bits-1; --phased sum... log2(16*8)=7bits
@@ -152,6 +158,7 @@ port(
 		SignalIn_clkA	: in	std_logic;
 		SignalOut_clkB	: out	std_logic);
 end component;
+
 component flag_sync is
 port(
 	clkA			: in	std_logic;
@@ -160,12 +167,19 @@ port(
    busy_clkA	: out	std_logic;
    out_clkB		: out	std_logic);
 end component;
+
+component power_lut is --dont use this. This generates !1.5 million bits in memory
+port(
+		clk_i    : in std_logic;
+		a			: in	signed(7 downto 0);
+		z			: out	unsigned(15 downto 0));
+end component;
 --------------
 
 begin
 ------------------------------------------------
 
-proc_pipeline_data: process(clk_data_i)
+proc_pipeline_data: process(clk_data_i,internal_phased_trig_en)
 begin
 	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
 		--ch 0
@@ -206,55 +220,126 @@ begin
 	end if;
 end process;
 
-proc_interpolate: process(clk_data_i)
+proc_interpolate: process(clk_data_i, internal_phased_trig_en)
 --okay so interpolating 4 channels at a window size of 16 is probably better than 
---interpolating over 8 beams at a window size of 8. or maybe it's the same.. 8 beams at a window size of 16
---makes it 2x worse then. ok
+--interpolating over 8 beams at a window size of 8... much better at 16 beams of 16
 begin
 	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
 		--first pull off the samples we need. 
 		for i in 0 to 3 loop --loop over channels
-			for j in 0 to interp_data_length-1 loop
+			--for j in 0 to interp_data_length-1 loop
+			--	if (j mod interp_factor) = 0 then
+			--		interp_buffer(i,j)<=X"00"&streaming_data(i,j / interp_factor);
+			--		interp_data(i,j) <= interp_buffer(i,j)(7 downto 0);
+			--	else
+			--		interp_buffer(i,j)<=(streaming_data(i,j/4)+(streaming_data(i,j/4+1)-streaming_data(i,j/4))*(j mod interp_factor)/interp_factor);--would be nice if didn't have to buffer this
+			--		interp_data(i,j)(6 downto 0)<=interp_buffer(i,j)(6 downto 0); --truncate using lower bits
+			--		interp_data(i,j)(7)<=interp_buffer(i,j)(15); --keep the sign bit
+			--	end if;
+			--end loop;
+			
+			--interpolate the samples coming in
+			for j in 0 to 4*interp_factor-1 loop
+				--interp_data(i,j) <= resize(interp_buffer(i,j)(15)&interp_buffer(i,j)(6 downto 0); --slice and send
+				interp_data(i,j) <= resize(interp_buffer(i,j),8); --slice and send
 				if (j mod interp_factor) = 0 then
-					interp_buffer(i,j)<=X"00"&streaming_data(i,j / interp_factor);
-					interp_data(i,j) <= interp_buffer(i,j)(7 downto 0);
+					--interp_buffer(i,j)<=X"00"&streaming_data(i,j / interp_factor);--known samples dont need interpolation
+					interp_buffer(i,j)<=resize(streaming_data(i,j / interp_factor),16);--known samples dont need interpolation
+				   --interp_buffer(i,j)<=streaming_data(i,j / interp_factor)(7)&B"00000000"&streaming_data(i,j / interp_factor)(6 downto 0);--known samples don
 				else
-					interp_buffer(i,j)<=(streaming_data(i,j/4)+(streaming_data(i,j/4+1)-streaming_data(i,j/4))*(j mod interp_factor)/interp_factor);--would be nice if didn't have to buffer this
-					interp_data(i,j)(6 downto 0)<=interp_buffer(i,j)(6 downto 0); --truncate using lower bits
-					interp_data(i,j)(7)<=interp_buffer(i,j)(15); --keep the sign bit
+				   -- interp_buffer(i,j)<=x"8000";	
+					interp_buffer(i,j)<=(streaming_data(i,j/4)+(streaming_data(i,j/4+1)-streaming_data(i,j/4))*(j mod interp_factor)/interp_factor);--I hope it does the shift in the compiler (pow od 2.)
+					--would be nice if didn't have to buffer then take slice
+					--interp_data(i,j)(6 downto 0)<=interp_buffer(i,j)(6 downto 0); --truncate using lower bits
+					--interp_data(i,j)(7)<=interp_buffer(i,j)(15); --keep the sign bit
 				end if;
+				
+				interp_data(i,j)<=resize(interp_buffer(i,j),8);
+
+				--interp_data(i,j)(6 downto 0)<=interp_buffer(i,j)(6 downto 0); --truncate using lower bits
+				--interp_data(i,j)(7)<=interp_buffer(i,j)(15); --keep the sign bit
 			end loop;
+			
+			--shift the interpolated samples so we don't need to recalculate
+			for j in 4*interp_factor to interp_data_length-1 loop
+				--interp_buffer(i,j)<=interp_buffer(i,j-4*interp_factor);
+				interp_data(i,j)<=interp_data(i,j-4*interp_factor);
+				--interp_data(i,j)(<=resize(interp_buffer(i,j),8);
+				--interp_data(i,j)(7)<=interp_buffer(i,j)(15);
+				--interp_data(i,j)(6 downto 0)<=interp_buffer(i,j)(6 downto 0);
+			end loop;
+		
 		end loop;
 	end if;
 end process;
 
-proc_phasing: process(clk_data_i)
+proc_phasing: process(clk_data_i,internal_phased_trig_en)
 begin
 	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then 
 		for i in 0 to num_beams-1 loop --loop over beams
 			for j in 0 to phased_sum_length-1 loop
+				phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(i,0)-(j-11)),10)
+					+resize(interp_data(1,beam_delays(i,1)-(j-11)),10)
+					+resize(interp_data(2,beam_delays(i,2)-(j-11)),10)
+					+resize(interp_data(3,beam_delays(i,3)-(j-11)),10);
 					
-				phased_beam_waves(i,j) <= resize(interp_data(0,beam_delays(i,0)-(j-7))
-					+interp_data(1,beam_delays(i,1)-(j-7))
-					+interp_data(2,beam_delays(i,2)-(j-7))
-					+interp_data(3,beam_delays(i,3)-(j-7)),10);--maybe resize instead of concatenate will tranfer the sign correctly
+				if(to_integer(phased_beam_waves_buff(i,j))>127) then
+					phased_beam_waves(i,j)<=b"01111111";--saturate max
+				elsif(to_integer(phased_beam_waves_buff(i,j))<-127) then
+				  phased_beam_waves(i,j)<=b"10000000"; --saturate min
+				else
+					phased_beam_waves(i,j)<=resize(phased_beam_waves_buff(i,j),8); --this can be 10, 9 fits in a 1/4 of dsp. the rest of the calculations souldnt overflow
+					--phased_beam_waves(i,j)<=phased_beam_waves_buff(i,j)(9)&phased_beam_waves_buff(i,j)(6 downto 0); --send it through
+				end if;	
+				--phased_beam_waves(i,j) <= resize(interp_data(0,beam_delays(i,0)-(j-11)),8)
+				--	+interp_data(1,beam_delays(i,1)-(j-11))
+				--	+interp_data(2,beam_delays(i,2)-(j-11))
+				--	+interp_data(3,beam_delays(i,3)-(j-11));--maybe resize instead of concatenate will tranfer the sign correctly
 
 			end loop;
 		end loop;
 	end if;
 end process;
 
+--DO_POWER_BEAM : for i in 0 to num_beams-1 generate
+--	DO_POWER_SMAPLE : for j in 0 to phased_sum_length-1 generate
+--		xPOWERLUT : power_lut
+--		port map(
+--		clk_i => clk_data_i,
+--		a				=> phased_beam_waves(i,j),
+--		z				=> phased_power(i,j));
+--	end generate;
+--end generate;
 
-proc_square_to_power : process(clk_data_i,rst_i)
+proc_square_to_power : process(clk_data_i,internal_phased_trig_en)
 begin
 
-	if rst_i = '1' then
-		phased_power<=(others=>(others=>(others=>'0')));
-	
-	elsif rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
+	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
 		for i in 0 to num_beams-1 loop
 			for j in 0 to phased_sum_length-1 loop
-				phased_power(i,j)<=unsigned(abs(phased_beam_waves(i,j))*abs(phased_beam_waves(i,j)));
+			
+				--if phased_beam_waves(i,j)>64 then
+					--phased_power(i,j)<=2**16;
+				--elsif phased_beam_waves(i,j)<-64 then
+				--	phased_power(i,j)<=2**16;
+				--elsif phased_beam_waves(i,j)(phased_sum_bits-1)='1' then
+				--   phased_power(i,j)<=power_LUT(not phased_beam_waves);
+				--else
+				--	phased_power(i,j)<=power_LUT(phased_beam_waves(i,j));
+				--end if;
+					
+				
+			   --if phased_beam_waves(i,j)(phased_sum_bits-1)='1' then
+				--    phased_power(i,j)<=unsigned((not phased_beam_waves(i,j))*(not phased_beam_waves(i,j)));
+				--else
+				--	 phased_power(i,j)<=unsigned((phased_beam_waves(i,j))*(phased_beam_waves(i,j)));
+				--end if;
+				
+				phased_power(i,j)<=unsigned(abs(phased_beam_waves(i,j)))*unsigned(abs(phased_beam_waves(i,j)));
+				
+				--phased_power(i,j)<=unsigned(abs(phased_beam_waves(i,j))*abs(phased_beam_waves(i,j)));
+				
+				
 			end loop;
 		end loop;
 	
@@ -262,22 +347,32 @@ begin
 end process;
 --------------
 
-proc_avg_beam_power : process(clk_data_i,rst_i)
+proc_avg_beam_power : process(clk_data_i)
 begin		
 
-	if rst_i = '1' then
-		power_sum<=(others=>(others=>'0'));
-	elsif rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
+
+	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
 		for i in 0 to num_beams-1 loop
 			--power_sum(i)<=resize(phased_power(i,0)+phased_power(i,1),power_sum_bits);
 				
-			power_sum(i)<=resize(phased_power(i,0)+phased_power(i,1)+phased_power(i,2)+phased_power(i,3)
-				+phased_power(i,4)+phased_power(i,5)+phased_power(i,6)+phased_power(i,7)
-				+phased_power(i,8)+phased_power(i,9)+phased_power(i,10)+phased_power(i,11)
-				+phased_power(i,12)+phased_power(i,13)+phased_power(i,14)+phased_power(i,15),23);
+			power_sum(i)<=resize(phased_power(i,0),num_power_bits)+resize(phased_power(i,1),num_power_bits)+resize(phased_power(i,2),num_power_bits)
+				+resize(phased_power(i,3),num_power_bits)+resize(phased_power(i,4),num_power_bits)+resize(phased_power(i,5),num_power_bits)
+				+resize(phased_power(i,6),num_power_bits)+resize(phased_power(i,7),num_power_bits)+resize(phased_power(i,8),num_power_bits)
+				+resize(phased_power(i,9),num_power_bits)+resize(phased_power(i,10),num_power_bits)+resize(phased_power(i,11),num_power_bits)
+				+resize(phased_power(i,12),num_power_bits)+resize(phased_power(i,13),num_power_bits)+resize(phased_power(i,14),num_power_bits)
+				+resize(phased_power(i,15),num_power_bits)+resize(phased_power(i,16),num_power_bits)+resize(phased_power(i,17),num_power_bits)
+				+resize(phased_power(i,18),num_power_bits)+resize(phased_power(i,19),num_power_bits)+resize(phased_power(i,20),num_power_bits)
+				+resize(phased_power(i,21),num_power_bits)+resize(phased_power(i,22),num_power_bits)+resize(phased_power(i,23),num_power_bits); --all these are unsigned so add should be ok
 			
 
-
+			--power_sum(i)<=resize(phased_power(i,0),num_power_bits)+phased_power(i,1)+phased_power(i,2)+phased_power(i,3)
+			--	+phased_power(i,4)+phased_power(i,5)+phased_power(i,6)+phased_power(i,7)--,23);
+			--	+phased_power(i,8)+phased_power(i,9)+phased_power(i,10)+phased_power(i,11)
+			--	+phased_power(i,12)+phased_power(i,13)+phased_power(i,14)+phased_power(i,15)
+			--	+phased_power(i,16)+phased_power(i,17)+phased_power(i,18)+phased_power(i,19)
+			--	+phased_power(i,20)+phased_power(i,21)+phased_power(i,22)+phased_power(i,23); --all these are unsigned so add should be ok
+			
+			
 			--power_sum(i)<=power_sum(i)+phased_power(i,j); --add the rest
 				--maybe it compiles correctly to add all of them but im lazy to write them all
 				
@@ -306,41 +401,41 @@ begin
 		triggering_beam<= (others=>'0');
 		servoing_beam<= (others=>'0');
 		
-		trig_clear <= (others=>'0');
-		trig_counter <= (others=>(others=>'0'));
-		servo_clear <= (others=>'0');
-		servo_counter <= (others=>(others=>'0'));
+		--trig_clear <= (others=>'0');
+		--trig_counter <= (others=>(others=>'0'));
+		--servo_clear <= (others=>'0');
+		--servo_counter <= (others=>(others=>'0'));
 
 		
 	elsif rising_edge(clk_data_i) then
 		--loop over the beams and this is a big mess
 		for i in 0 to num_beams-1 loop
 			
-			if trig_counter(i) = coinc_window_int then
-				trig_clear(i) <= '1';
-			else
-				trig_clear(i) <= '0';
-			end if;
+			--if trig_counter(i) = coinc_window_int then
+			--	trig_clear(i) <= '1';
+			--else
+			--	trig_clear(i) <= '0';
+			--end if;
 			
 			--if beam_trigger_reg(i)(0) = '1'  then	
-			if triggering_beam(i) = '1'  then
-				trig_counter(i) <= trig_counter(i) + 1;
-			else
-				trig_counter(i) <= (others=>'0');
-			end if;
+			--if triggering_beam(i) = '1'  then
+			--	trig_counter(i) <= trig_counter(i) + 1;
+			--else
+			--	trig_counter(i) <= (others=>'0');
+			--end if;
 			------------------------------------
 			--for servoing only (basically a separate thresholding)
-			if servo_counter(i) = coinc_window_int then
-				servo_clear(i) <= '1';
-			else
-				servo_clear(i) <= '0';
-			end if;
+			--if servo_counter(i) = coinc_window_int then
+			--	servo_clear(i) <= '1';
+			--else
+			--	servo_clear(i) <= '0';
+			--end if;
 				
-			if beam_servo_reg(i)(0) = '1' then
-				servo_counter(i) <= servo_counter(i) + 1;
-			else
-				servo_counter(i) <= (others=>'0');
-			end if;
+			--if beam_servo_reg(i)(0) = '1' then
+			--	servo_counter(i) <= servo_counter(i) + 1;
+			--else
+			--	servo_counter(i) <= (others=>'0');
+			--end if;
 			------------------------------------
 		
 			if avg_power(i)>trig_beam_thresh(i) then
@@ -352,6 +447,7 @@ begin
 				beam_trigger_reg(i)(0)<='0';
 			end if;
 			
+			beam_trigger_reg(i)(1)<=beam_trigger_reg(i)(0);
 			if avg_power(i)>servo_beam_thresh(i) then
 				servoing_beam(i)<='1';
 				beam_servo_reg(i)(0)<='1';
@@ -359,6 +455,7 @@ begin
 				servoing_beam(i)<='0';
 				beam_servo_reg(i)(0)<='0';
 			end if;
+			beam_servo_reg(i)(1)<=beam_servo_reg(i)(0);
 
 		
 			--if triggering_beam(i) = internal_trigger_beam_mask(i) then
@@ -420,10 +517,12 @@ end process;
 
 proc_threshold_set:process(clk_data_i)
 begin
-	for i in 0 to num_beams-1 loop
-		trig_beam_thresh(i)(power_high_bit downto power_low_bit)<=input_trig_thresh(i);
-		servo_beam_thresh(i)(power_high_bit downto power_low_bit)<=input_servo_thresh(i);
-	end loop;
+   if rising_edge(clk_data_i) then
+		for i in 0 to num_beams-1 loop
+			trig_beam_thresh(i)<=resize(input_trig_thresh(i),num_power_bits)+threshold_offset;
+			servo_beam_thresh(i)<=resize(input_servo_thresh(i),num_power_bits)+threshold_offset;
+		end loop;
+	end if;
 end process;
 
 --//sync some software commands to the data clock
@@ -460,6 +559,13 @@ TRIGBEAMMASK : for i in 0 to num_beams-1 generate --beam masks. 1 == on
 	SignalOut_clkB	=> internal_trigger_beam_mask(i));
 end generate;
 
+THRESH_OFFSET: for i in 0 to 11 generate
+	xTHRESHOFFSETSYNC : signal_sync
+		port map(
+		clkA	=> clk_i,   clkB	=> clk_data_i,
+		SignalIn_clkA	=> registers_i(to_integer(unsigned(phased_trig_reg_base))+1)(i), --phased threshold offset
+		SignalOut_clkB	=> threshold_offset(i));
+end generate;
 ------------
 --these were causing issues
 --trig_array_for_scalars(2*num_beams+1 downto num_beams +2)<=servo_clear(num_beams-1 downto 0);
@@ -473,8 +579,9 @@ end generate;
 --trig_array_for_scalars(0)<=phased_trigger;
 
 ----TRIGGER OUT!!
-phased_trig_o <= phased_trigger_reg(0); --phased trigger for 0->1 transition. phased_trigger_reg(0) for absolute trigger 
+phased_trig_o <= phased_trigger;-- for 0->1 transition. phased_trigger_reg(0) for absolute trigger 
 --------------
+--phased_trig_o <= phased_trigger_reg(0); --phased trigger for 0->1 transition. phased_trigger_reg(0) for absolute trigger
 trigscaler: flag_sync
 	port map(
 		clkA 			=> clk_data_i,
@@ -511,9 +618,6 @@ ServoToScalers	:	 for i in 0 to num_beams-1 generate
 		busy_clkA	=> open,
 		out_clkB		=> trig_bits_o(i+18));
 end generate ServoToScalers;
-
-
-
 
 --------------
 xTRIGENABLESYNC : signal_sync --phased trig enable bit
