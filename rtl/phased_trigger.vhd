@@ -53,7 +53,7 @@ constant interp_data_length: integer := interp_factor*(20-1)+1;--interp_factor*(
 constant window_length:integer := 16;
 constant baseline: signed(7 downto 0) := x"80";
 constant phased_sum_bits: integer := 8;
-constant phased_sum_length: integer := 24; --not sure if it should be 8 or 16. longer windows smooths things. shorter window gives higher peak
+constant phased_sum_length: integer := 32; --8 real samples ... not sure if it should be 8 or 16. longer windows smooths things. shorter window gives higher peak
 constant phased_sum_power_bits: integer := 16;
 constant num_power_bits: integer := 24;
 constant power_sum_bits:	integer := 24; --actually 25 but this fits into the io regs
@@ -61,7 +61,7 @@ constant input_power_thesh_bits:	integer := 12;
 constant power_length: integer := 12;
 constant power_low_bit: integer := 0; --might need to be 1. tried making it adjustable but didnt work. lab based sig starts triggering at 4000 threshold
 constant power_high_bit: integer := power_low_bit+power_length-1;
-constant num_div: integer := 4;--integer(log2(real(phased_sum_length)));
+constant num_div: integer := 5;--integer(log2(real(phased_sum_length)));
 constant pad_zeros: std_logic_vector(num_div-1 downto 0):=(others=>'0');
 --constant threshold_offset: integer:= 3000; --if this works I can add it to the registers. might not work
 
@@ -109,6 +109,8 @@ type power_array is array (num_beams-1 downto 0) of unsigned(num_power_bits-1 do
 signal trig_beam_thresh : power_array:=(others=>(others=>'0')) ; --trigger thresholds for all beams
 signal servo_beam_thresh : power_array:=(others=>(others=>'0')) ;--(others=>(others=>'0')) --servo thresholds for all beams
 signal power_sum : power_array; --power levels for all beams
+signal power_sum_lower : power_array; --power levels for all beams
+signal power_sum_upper : power_array; --power levels for all beams
 signal avg_power: power_array;
 signal latched_power_out: power_array;
 
@@ -278,10 +280,10 @@ begin
 	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then 
 		for i in 0 to num_beams-1 loop --loop over beams
 			for j in 0 to phased_sum_length-1 loop
-				phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(i,0)-(j-11)),10)
-					+resize(interp_data(1,beam_delays(i,1)-(j-11)),10)
-					+resize(interp_data(2,beam_delays(i,2)-(j-11)),10)
-					+resize(interp_data(3,beam_delays(i,3)-(j-11)),10);
+				phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(i,0)-(j-15)),10)
+					+resize(interp_data(1,beam_delays(i,1)-(j-15)),10)
+					+resize(interp_data(2,beam_delays(i,2)-(j-15)),10)
+					+resize(interp_data(3,beam_delays(i,3)-(j-15)),10);
 					
 				if(to_integer(phased_beam_waves_buff(i,j))>127) then
 					phased_beam_waves(i,j)<=b"01111111";--saturate max
@@ -355,15 +357,19 @@ begin
 		for i in 0 to num_beams-1 loop
 			--power_sum(i)<=resize(phased_power(i,0)+phased_power(i,1),power_sum_bits);
 				
-			power_sum(i)<=resize(phased_power(i,0),num_power_bits)+resize(phased_power(i,1),num_power_bits)+resize(phased_power(i,2),num_power_bits)
+			power_sum_lower(i)<=resize(phased_power(i,0),num_power_bits)+resize(phased_power(i,1),num_power_bits)+resize(phased_power(i,2),num_power_bits)
 				+resize(phased_power(i,3),num_power_bits)+resize(phased_power(i,4),num_power_bits)+resize(phased_power(i,5),num_power_bits)
 				+resize(phased_power(i,6),num_power_bits)+resize(phased_power(i,7),num_power_bits)+resize(phased_power(i,8),num_power_bits)
 				+resize(phased_power(i,9),num_power_bits)+resize(phased_power(i,10),num_power_bits)+resize(phased_power(i,11),num_power_bits)
 				+resize(phased_power(i,12),num_power_bits)+resize(phased_power(i,13),num_power_bits)+resize(phased_power(i,14),num_power_bits)
-				+resize(phased_power(i,15),num_power_bits)+resize(phased_power(i,16),num_power_bits)+resize(phased_power(i,17),num_power_bits)
+				+resize(phased_power(i,15),num_power_bits);
+			power_sum_upper(i)<=	resize(phased_power(i,16),num_power_bits)+resize(phased_power(i,17),num_power_bits)
 				+resize(phased_power(i,18),num_power_bits)+resize(phased_power(i,19),num_power_bits)+resize(phased_power(i,20),num_power_bits)
-				+resize(phased_power(i,21),num_power_bits)+resize(phased_power(i,22),num_power_bits)+resize(phased_power(i,23),num_power_bits); --all these are unsigned so add should be ok
-			
+				+resize(phased_power(i,21),num_power_bits)+resize(phased_power(i,22),num_power_bits)+resize(phased_power(i,23),num_power_bits) --all these are unsigned so add should be ok
+				+resize(phased_power(i,24),num_power_bits)+resize(phased_power(i,25),num_power_bits)+resize(phased_power(i,26),num_power_bits) --all these are unsigned so add should be ok
+				+resize(phased_power(i,27),num_power_bits)+resize(phased_power(i,28),num_power_bits)+resize(phased_power(i,29),num_power_bits) --all these are unsigned so add should be ok
+				+resize(phased_power(i,30),num_power_bits)+resize(phased_power(i,31),num_power_bits); --all these are unsigned so add should be ok
+			power_sum(i)<=power_sum_lower(i)+power_sum_upper(i);
 
 			--power_sum(i)<=resize(phased_power(i,0),num_power_bits)+phased_power(i,1)+phased_power(i,2)+phased_power(i,3)
 			--	+phased_power(i,4)+phased_power(i,5)+phased_power(i,6)+phased_power(i,7)--,23);
