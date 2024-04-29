@@ -1,8 +1,9 @@
-module power_lut(a, z);
+module power_lut(clk_i, a, z);
+	 input clk_i;
     input [6:0] a;
     output reg [13:0] z;
 
-    always @(a) begin
+    always @(posedge clk_i) begin
         case ({a})
             7'b0000000: z <= 14'b00000000000000;
             7'b0000001: z <= 14'b00000000000001;

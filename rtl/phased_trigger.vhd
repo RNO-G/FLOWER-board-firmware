@@ -172,7 +172,7 @@ end component;
 
 component power_lut is --dont use this. This generates !1.5 million bits in memory
 port(
-		--clk_i    : in std_logic;
+		clk_i    : in std_logic;
 		a			: in	signed(6 downto 0);
 		z			: out	unsigned(13 downto 0));
 end component;
@@ -315,10 +315,10 @@ begin
 end process;
 
 DO_POWER_BEAM : for i in 0 to num_beams-1 generate
-	DO_POWER_SMAPLE : for j in 0 to phased_sum_length-1 generate
+	DO_POWER_SAMPLE : for j in 0 to phased_sum_length-1 generate
 		xPOWERLUT : power_lut
 		port map(
-		--clk_i => clk_data_i,
+		clk_i => clk_data_i, --tried clock but this looks like bram (too slow), unclocked should just be LUT
 		a				=> phased_beam_waves(i,j),
 		z				=> phased_power(i,j));
 	end generate;
