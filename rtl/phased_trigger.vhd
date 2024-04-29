@@ -52,9 +52,9 @@ constant interp_factor: integer := 4;
 constant interp_data_length: integer := interp_factor*(20-1)+1;--interp_factor*(streaming_buffer_length-1)+1;
 constant window_length:integer := 16;
 constant baseline: signed(7 downto 0) := x"80";
-constant phased_sum_bits: integer := 8;
+constant phased_sum_bits: integer := 7; --8. trying 7 bit lut
 constant phased_sum_length: integer := 32; --8 real samples ... not sure if it should be 8 or 16. longer windows smooths things. shorter window gives higher peak
-constant phased_sum_power_bits: integer := 16;
+constant phased_sum_power_bits: integer := 14;--16 with calc. trying 7-> 14 lut
 constant num_power_bits: integer := 24;
 constant power_sum_bits:	integer := 24; --actually 25 but this fits into the io regs
 constant input_power_thesh_bits:	integer := 12;
@@ -95,7 +95,7 @@ signal input_servo_thresh : thresh_input;
 type streaming_data_array is array(3 downto 0, streaming_buffer_length-1 downto 0) of signed(7 downto 0);
 signal streaming_data : streaming_data_array := (others=>(others=>(others=>'0'))); --pipeline data
 
-type phased_arr_buff is array (num_beams-1 downto 0,phased_sum_length-1 downto 0) of signed(phased_sum_bits+1 downto 0);-- range 0 to 2**phased_sum_bits-1; --phased sum... log2(16*8)=7bits
+type phased_arr_buff is array (num_beams-1 downto 0,phased_sum_length-1 downto 0) of signed(9 downto 0);-- range 0 to 2**phased_sum_bits-1; --phased sum... log2(16*8)=7bits
 signal phased_beam_waves_buff: phased_arr_buff;
 
 
@@ -172,9 +172,9 @@ end component;
 
 component power_lut is --dont use this. This generates !1.5 million bits in memory
 port(
-		clk_i    : in std_logic;
-		a			: in	signed(7 downto 0);
-		z			: out	unsigned(15 downto 0));
+		--clk_i    : in std_logic;
+		a			: in	signed(6 downto 0);
+		z			: out	unsigned(13 downto 0));
 end component;
 --------------
 
@@ -285,14 +285,25 @@ begin
 					+resize(interp_data(2,beam_delays(i,2)-(j-15)),10)
 					+resize(interp_data(3,beam_delays(i,3)-(j-15)),10);
 					
-				if(to_integer(phased_beam_waves_buff(i,j))>127) then
-					phased_beam_waves(i,j)<=b"01111111";--saturate max
-				elsif(to_integer(phased_beam_waves_buff(i,j))<-127) then
-				  phased_beam_waves(i,j)<=b"10000000"; --saturate min
+				--if(to_integer(phased_beam_waves_buff(i,j))>127) then
+				--	phased_beam_waves(i,j)<=b"01111111";--saturate max
+				--elsif(to_integer(phased_beam_waves_buff(i,j))<-127) then
+				--  phased_beam_waves(i,j)<=b"10000000"; --saturate min
+				--else
+				--	phased_beam_waves(i,j)<=resize(phased_beam_waves_buff(i,j),8); --this can be 10, 9 fits in a 1/4 of dsp. the rest of the calculations souldnt overflow
+					--phased_beam_waves(i,j)<=phased_beam_waves_buff(i,j)(9)&phased_beam_waves_buff(i,j)(6 downto 0); --send it through
+				--end if;	
+				
+				if(to_integer(phased_beam_waves_buff(i,j))>63) then
+					phased_beam_waves(i,j)<=b"0111111";--saturate max
+				elsif(to_integer(phased_beam_waves_buff(i,j))<-63) then
+				  phased_beam_waves(i,j)<=b"1000000"; --saturate min
 				else
-					phased_beam_waves(i,j)<=resize(phased_beam_waves_buff(i,j),8); --this can be 10, 9 fits in a 1/4 of dsp. the rest of the calculations souldnt overflow
+					phased_beam_waves(i,j)<=resize(phased_beam_waves_buff(i,j),7); --this can be 10, 9 fits in a 1/4 of dsp. the rest of the calculations souldnt overflow
 					--phased_beam_waves(i,j)<=phased_beam_waves_buff(i,j)(9)&phased_beam_waves_buff(i,j)(6 downto 0); --send it through
 				end if;	
+				
+				
 				--phased_beam_waves(i,j) <= resize(interp_data(0,beam_delays(i,0)-(j-11)),8)
 				--	+interp_data(1,beam_delays(i,1)-(j-11))
 				--	+interp_data(2,beam_delays(i,2)-(j-11))
@@ -303,50 +314,50 @@ begin
 	end if;
 end process;
 
---DO_POWER_BEAM : for i in 0 to num_beams-1 generate
---	DO_POWER_SMAPLE : for j in 0 to phased_sum_length-1 generate
---		xPOWERLUT : power_lut
---		port map(
---		clk_i => clk_data_i,
---		a				=> phased_beam_waves(i,j),
---		z				=> phased_power(i,j));
---	end generate;
---end generate;
+DO_POWER_BEAM : for i in 0 to num_beams-1 generate
+	DO_POWER_SMAPLE : for j in 0 to phased_sum_length-1 generate
+		xPOWERLUT : power_lut
+		port map(
+		--clk_i => clk_data_i,
+		a				=> phased_beam_waves(i,j),
+		z				=> phased_power(i,j));
+	end generate;
+end generate;
 
-proc_square_to_power : process(clk_data_i,internal_phased_trig_en)
-begin
+--proc_square_to_power : process(clk_data_i,internal_phased_trig_en)
+--begin
 
-	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
-		for i in 0 to num_beams-1 loop
-			for j in 0 to phased_sum_length-1 loop
+	--if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
+		--for i in 0 to num_beams-1 loop
+			--for j in 0 to phased_sum_length-1 loop
 			
-				--if phased_beam_waves(i,j)>64 then
-					--phased_power(i,j)<=2**16;
-				--elsif phased_beam_waves(i,j)<-64 then
-				--	phased_power(i,j)<=2**16;
-				--elsif phased_beam_waves(i,j)(phased_sum_bits-1)='1' then
-				--   phased_power(i,j)<=power_LUT(not phased_beam_waves);
-				--else
-				--	phased_power(i,j)<=power_LUT(phased_beam_waves(i,j));
-				--end if;
+				----if phased_beam_waves(i,j)>64 then
+					----phased_power(i,j)<=2**16;
+				----elsif phased_beam_waves(i,j)<-64 then
+				----	phased_power(i,j)<=2**16;
+				----elsif phased_beam_waves(i,j)(phased_sum_bits-1)='1' then
+				----   phased_power(i,j)<=power_LUT(not phased_beam_waves);
+				----else
+				----	phased_power(i,j)<=power_LUT(phased_beam_waves(i,j));
+				----end if;
 					
 				
-			   --if phased_beam_waves(i,j)(phased_sum_bits-1)='1' then
-				--    phased_power(i,j)<=unsigned((not phased_beam_waves(i,j))*(not phased_beam_waves(i,j)));
-				--else
-				--	 phased_power(i,j)<=unsigned((phased_beam_waves(i,j))*(phased_beam_waves(i,j)));
-				--end if;
+			   ----if phased_beam_waves(i,j)(phased_sum_bits-1)='1' then
+				----    phased_power(i,j)<=unsigned((not phased_beam_waves(i,j))*(not phased_beam_waves(i,j)));
+				----else
+				----	 phased_power(i,j)<=unsigned((phased_beam_waves(i,j))*(phased_beam_waves(i,j)));
+				----end if;
 				
-				phased_power(i,j)<=unsigned(abs(phased_beam_waves(i,j)))*unsigned(abs(phased_beam_waves(i,j)));
+				--phased_power(i,j)<=unsigned(abs(phased_beam_waves(i,j)))*unsigned(abs(phased_beam_waves(i,j)));
 				
-				--phased_power(i,j)<=unsigned(abs(phased_beam_waves(i,j))*abs(phased_beam_waves(i,j)));
+				----phased_power(i,j)<=unsigned(abs(phased_beam_waves(i,j))*abs(phased_beam_waves(i,j)));
 				
 				
-			end loop;
-		end loop;
+			--end loop;
+		--end loop;
 	
-	end if;
-end process;
+	--end if;
+--end process;
 --------------
 
 proc_avg_beam_power : process(clk_data_i)
