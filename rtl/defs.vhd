@@ -101,7 +101,7 @@ type sum_power_type is array(define_num_beams-1 downto 0) of
 constant define_16avg_pow_sum_range : integer := 20; --//20 bits (16 bits per sample, 16 samples)
 type average_power_16samp_type is array(define_num_beams-1 downto 0) of std_logic_vector(define_16avg_pow_sum_range-1 downto 0);
 
-constant num_beams: integer:=16;
+constant num_beams: integer:=8;
 constant num_channels: integer:=4;
 
 ----------------------------------------------------------------------

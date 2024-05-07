@@ -49,7 +49,7 @@ end phased_trigger;
 architecture rtl of phased_trigger is
 constant streaming_buffer_length: integer := 8;
 constant interp_factor: integer := 4;
-constant interp_data_length: integer := interp_factor*(20-1)+1;--interp_factor*(streaming_buffer_length-1)+1;
+constant interp_data_length: integer := interp_factor*(24)+1;--interp_factor*(streaming_buffer_length-1)+1;
 constant window_length:integer := 16;
 constant baseline: signed(7 downto 0) := x"80";
 constant phased_sum_bits: integer := 7; --8. trying 7 bit lut
@@ -69,13 +69,14 @@ signal threshold_offset: unsigned(11 downto 0):=x"bb8";
 
 type antenna_delays is array (num_beams-1 downto 0,num_channels-1 downto 0) of integer;
 --constant beam_delays : antenna_delays := ((12,11,10,9),(45,45,45,45)); --it will optimize away a lot of the streaming buffer if these numbers are small
-constant beam_delays : antenna_delays := (others=>(others=>32)); --try to force only beam 0 to trigger
+--constant beam_delays : antenna_delays := (others=>(others=>32)); --try to force only beam 0 to trigger
 
---(7,26,47,68),(7,25,45,65),(7,24,43,61),(7,23,40,57),(7,21,37,53),(7,20,34,48),(7,18,31,43),(7,16,28,37),(7,15,24,32),(7,13,21,27),(7,11,18,21),(7,10,15,17),(7,8,12,12),(7,7,9,8),(9,8,9,7),(12,10,10,7),
+--constant beam_delays : antenna_delays:= ((15,33,53,73),(15,32,51,70),(15,31,49,66),(15,30,46,62),(15,29,44,58),
+--	(15,27,41,54),(15,25,38,49),(15,24,35,44),(15,22,31,39),(15,21,28,33),(15,19,25,29),
+--	(15,17,22,24),(15,16,19,20),(15,15,17,16),(17,16,17,15),(19,18,18,15));
+	
+constant beam_delays : antenna_delays:=	((15,33,53,73),(15,31,49,66),(15,28,43,57),(15,25,36,46),(15,21,30,36),(15,18,23,25),(15,15,17,16),(19,18,18,15));
 
-
---constant beam_delays : antenna_delays := ((4,23,44,65),(4,22,42,62),(4,21,40,58),(4,20,37,54),(4,18,34,50),(4,17,31,45),(4,15,28,40),(4,13,25,34),(4,12,21,29),(4,10,18,24),(4,8,15,18),(4,7,12,14),(4,5,9,9),(4,4,6,5),(6,5,6,4),(9,7,7,4));
--- 8 beams!!! signal beam_delays: antenna_delays:=(4,23,44,65),(4,21,40,58),(4,18,34,48),(4,14,27,37),(4,11,19,26),(4,7,12,15),(4,4,6,5),(9,7,7,4));
 --honestly might be useful to add a beam of zero delay. the above have cable delays included into the calc
 
 
@@ -280,10 +281,10 @@ begin
 	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then 
 		for i in 0 to num_beams-1 loop --loop over beams
 			for j in 0 to phased_sum_length-1 loop
-				phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(i,0)-(j-15)),10)
-					+resize(interp_data(1,beam_delays(i,1)-(j-15)),10)
-					+resize(interp_data(2,beam_delays(i,2)-(j-15)),10)
-					+resize(interp_data(3,beam_delays(i,3)-(j-15)),10);
+				phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(i,0)+(j-15)),10)
+					+resize(interp_data(1,beam_delays(i,1)+(j-15)),10)
+					+resize(interp_data(2,beam_delays(i,2)+(j-15)),10)
+					+resize(interp_data(3,beam_delays(i,3)+(j-15)),10);
 					
 				--if(to_integer(phased_beam_waves_buff(i,j))>127) then
 				--	phased_beam_waves(i,j)<=b"01111111";--saturate max
@@ -624,7 +625,7 @@ servoscaler: flag_sync
 		clkB			=> clk_i,
 		in_clkA		=> phased_servo,
 		busy_clkA	=> open,
-		out_clkB		=> trig_bits_o(17));
+		out_clkB		=> trig_bits_o(num_beams+1));
 
 ServoToScalers	:	 for i in 0 to num_beams-1 generate 
 	xSERVOSYNC : flag_sync
@@ -633,7 +634,7 @@ ServoToScalers	:	 for i in 0 to num_beams-1 generate
 		clkB			=> clk_i,
 		in_clkA		=> servoing_beam(i) and internal_trigger_beam_mask(i),
 		busy_clkA	=> open,
-		out_clkB		=> trig_bits_o(i+18));
+		out_clkB		=> trig_bits_o(i+num_beams+2));
 end generate ServoToScalers;
 
 --------------
