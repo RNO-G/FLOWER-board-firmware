@@ -145,8 +145,8 @@ begin
 
 		--//masking + trigger configurations
 		registers_io(95) <= x"000000";   --// coinc trig channel masking [95]
-		registers_io(80) <= x"000000";   --// beam masks for phased trigger [80]
-		registers_io(81) <= x"000BB8";   --// phased threshold offset [81]
+		registers_io(80) <= x"0000FF";   --// beam masks for phased trigger [80]
+		registers_io(81) <= x"000BB8";   --// phased threshold offset [81] (in case thresholds saturate)
 		registers_io(82) <= x"000300";	--// phased trigger/beam enables [82]
 		registers_io(75) <= x"00FF00";   --// external trigger input configuration [75]
 		registers_io(83) <= x"000C03";   --// external trigger output configuration [83]
