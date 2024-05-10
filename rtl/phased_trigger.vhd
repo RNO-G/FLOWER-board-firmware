@@ -335,29 +335,29 @@ begin
 end process;
 
 --this just uses a LUT in logic to find the power from a signed value.
-DO_POWER_BEAM : for i in 0 to num_beams-1 generate
-	DO_POWER_SAMPLE : for j in 0 to phased_sum_length-1 generate
-		xPOWERLUT : power_lut
-		port map(
-		clk_i => clk_data_i, --tried clock but this looks like bram (too slow), unclocked should just be LUT
-		a				=> phased_beam_waves(i,j),
-		z				=> phased_power(i,j));
-	end generate;
-end generate;
+--DO_POWER_BEAM : for i in 0 to num_beams-1 generate
+--	DO_POWER_SAMPLE : for j in 0 to phased_sum_length-1 generate
+--		xPOWERLUT : power_lut
+--		port map(
+--		clk_i => clk_data_i, --tried clock but this looks like bram (too slow), unclocked should just be LUT
+--		a				=> phased_beam_waves(i,j),
+--		z				=> phased_power(i,j));
+--	end generate;
+--end generate;
 
 --this uses dsp's + logic to calculate the power. DSP might be needed for different interp.
---proc_square_to_power : process(clk_data_i,internal_phased_trig_en)
---begin
-	--if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
-		--for i in 0 to num_beams-1 loop
-			--for j in 0 to phased_sum_length-1 loop
+proc_square_to_power : process(clk_data_i,internal_phased_trig_en)
+begin
+	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
+		for i in 0 to num_beams-1 loop
+			for j in 0 to phased_sum_length-1 loop
 				
-				--phased_power(i,j)<=unsigned(abs(phased_beam_waves(i,j)))*unsigned(abs(phased_beam_waves(i,j)));
+				phased_power(i,j)<=unsigned(abs(phased_beam_waves(i,j)))*unsigned(abs(phased_beam_waves(i,j)));
 				
-			--end loop;
-		--end loop;
-	--end if;
---end process;
+			end loop;
+		end loop;
+	end if;
+end process;
 --------------
 
 proc_avg_beam_power : process(clk_data_i)
