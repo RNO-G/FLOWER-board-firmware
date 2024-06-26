@@ -76,9 +76,12 @@ type antenna_delays is array (num_beams-1 downto 0,num_channels-1 downto 0) of i
 --expected 8 beams to be used
 --constant beam_delays : antenna_delays:=	((15,33,53,73),(15,31,49,66),(15,28,43,57),(15,25,36,46),(15,21,30,36),(15,18,23,25),(15,15,17,16),(19,18,18,15));
 
---9 beams. 8 expected + one with equal delays
-constant beam_delays : antenna_delays:=	((32,32,32,32),(15,33,53,73),(15,31,49,66),(15,28,43,57),(15,25,36,46),
-	(15,21,30,36),(15,18,23,25),(15,15,17,16),(19,18,18,15));
+--9 beams. 8 expected + one with equal delays THIS ONE HAS THE CHANNELS IN THE WRONG ORDER... should be (ch3 ch2 ch1 ch0), instead thought (ch0,ch1,ch2,ch3)
+--constant beam_delays : antenna_delays:=	((32,32,32,32),(15,33,53,73),(15,31,49,66),(15,28,43,57),(15,25,36,46),
+--	(15,21,30,36),(15,18,23,25),(15,15,17,16),(19,18,18,15));
+	
+constant beam_delays:antenna_delays:=	((32,32,32,32),(73,53,33,15),(66,49,31,15),(57,43,28,15),
+	(46,36,25,15),(36,30,21,15),(25,23,18,15),(16,17,15,15),(15,18,18,19));
 
 type interpolated_data_array is array(3 downto 0, interp_data_length-1 downto 0) of signed(7 downto 0);
 signal interp_data: interpolated_data_array;
@@ -252,13 +255,21 @@ begin
 			for j in 0 to 4*interp_factor-1 loop
 	
 				if (j mod interp_factor) = 0 then
-					interp_buffer(i,j)<=resize(streaming_data(i,j / interp_factor),16);--known samples dont need interpolation
+					interp_data(i,j)<=streaming_data(i,j / interp_factor);--known samples dont need interpolation
 				else
-					interp_buffer(i,j)<=(streaming_data(i,j/4)+(streaming_data(i,j/4+1)-streaming_data(i,j/4))*(j mod interp_factor)/interp_factor);--I hope it does the shift in the compiler (pow od 2.)
+					interp_data(i,j)<=resize((streaming_data(i,j/4)+(streaming_data(i,j/4+1)-streaming_data(i,j/4))*(j mod interp_factor)/interp_factor),8);--I hope it does the shift in the compiler (pow od 2.)
 					--would be nice if didn't have to buffer then take slice
 				end if;
+
+					
+				--if (j mod interp_factor) = 0 then
+				--	interp_buffer(i,j)<=resize(streaming_data(i,j / interp_factor),16);--known samples dont need interpolation
+				--else
+				--	interp_buffer(i,j)<=(streaming_data(i,j/4)+(streaming_data(i,j/4+1)-streaming_data(i,j/4))*(j mod interp_factor)/interp_factor);--I hope it does the shift in the compiler (pow od 2.)
+					--would be nice if didn't have to buffer then take slice
+				--end if;
+				--interp_data(i,j)<=resize(interp_buffer(i,j),8);
 				
-				interp_data(i,j)<=resize(interp_buffer(i,j),8);
 			end loop;
 			
 			--shift the interpolated samples so we don't need to recalculate
@@ -277,20 +288,19 @@ begin
 		for i in 0 to num_beams-1 loop --loop over beams
 			for j in 0 to phased_sum_length-1 loop
 			   --calculate temp phased sum waveforms with larger data size
-				phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(i,0)+(j-15)),10)
+				phased_beam_waves(i,j)<=resize(resize(interp_data(0,beam_delays(i,0)+(j-15)),10)
 					+resize(interp_data(1,beam_delays(i,1)+(j-15)),10)
 					+resize(interp_data(2,beam_delays(i,2)+(j-15)),10)
-					+resize(interp_data(3,beam_delays(i,3)+(j-15)),10);
+					+resize(interp_data(3,beam_delays(i,3)+(j-15)),10),7);
 				
 				--saturate low and high for 7 bit LUT
-				if(to_integer(phased_beam_waves_buff(i,j))>63) then
-					phased_beam_waves(i,j)<=b"0111111";--saturate max
-				elsif(to_integer(phased_beam_waves_buff(i,j))<-63) then
-				  phased_beam_waves(i,j)<=b"1000000"; --saturate min
-				else
-					phased_beam_waves(i,j)<=resize(phased_beam_waves_buff(i,j),7); --this can be 10, 9 fits in a 1/4 of dsp. the rest of the calculations souldnt overflow
-					
-				end if;	
+				--if(to_integer(phased_beam_waves_buff(i,j))>63) then
+				--	phased_beam_waves(i,j)<=b"0111111";--saturate max
+				--elsif(to_integer(phased_beam_waves_buff(i,j))<-63) then
+				--  phased_beam_waves(i,j)<=b"1000000"; --saturate min
+				--else
+				--	phased_beam_waves(i,j)<=resize(phased_beam_waves_buff(i,j),7); --this can be 10, 9 fits in a 1/4 of dsp. the rest of the calculations souldnt overflow
+				--end if;	
 				
 			end loop;
 		end loop;
@@ -331,7 +341,7 @@ begin
 		for i in 0 to num_beams-1 loop
 				
 			--manually type all these... not sure how to make is a loop.
-			--also split in half for timing
+			--also split in half for timing I wonder if I split this up if it will use less resources?
 			power_sum_lower(i)<=resize(phased_power(i,0),num_power_bits)+resize(phased_power(i,1),num_power_bits)+resize(phased_power(i,2),num_power_bits)
 				+resize(phased_power(i,3),num_power_bits)+resize(phased_power(i,4),num_power_bits)+resize(phased_power(i,5),num_power_bits)
 				+resize(phased_power(i,6),num_power_bits)+resize(phased_power(i,7),num_power_bits)+resize(phased_power(i,8),num_power_bits)
