@@ -47,12 +47,12 @@ end phased_trigger;
 
 architecture rtl of phased_trigger is
 
---definitions + constants
+--definitions + constants -- I realize I can now just use 'length too
 constant streaming_buffer_length: integer := 8;
 constant interp_factor: integer := 4;
 constant interp_data_length: integer := interp_factor*(24)+1;--interp_factor*(streaming_buffer_length-1)+1;
 constant window_length:integer := 16;
-constant baseline: signed(7 downto 0) := x"80";
+constant baseline: unsigned(7 downto 0) := x"80";
 constant phased_sum_bits: integer := 7; --8. trying 7 bit lut
 constant phased_sum_length: integer := 32; --8 real samples ... not sure if it should be 8 or 16. longer windows smooths things. shorter window gives higher peak
 constant phased_sum_power_bits: integer := 14;--16 with calc. trying 7-> 14 lut
@@ -66,25 +66,18 @@ constant num_div: integer := 5;--can be calculated using -> integer(log2(real(ph
 constant pad_zeros: std_logic_vector(num_div-1 downto 0):=(others=>'0');
 
 type antenna_delays is array (num_beams-1 downto 0,num_channels-1 downto 0) of integer;
---all equal beams
---constant beam_delays : antenna_delays := (others=>(others=>32)); --try to force only beam 0 to trigger
---16 beams
---constant beam_delays : antenna_delays:= ((15,33,53,73),(15,32,51,70),(15,31,49,66),(15,30,46,62),(15,29,44,58),
---	(15,27,41,54),(15,25,38,49),(15,24,35,44),(15,22,31,39),(15,21,28,33),(15,19,25,29),
---	(15,17,22,24),(15,16,19,20),(15,15,17,16),(17,16,17,15),(19,18,18,15));
-
---expected 8 beams to be used
---constant beam_delays : antenna_delays:=	((15,33,53,73),(15,31,49,66),(15,28,43,57),(15,25,36,46),(15,21,30,36),(15,18,23,25),(15,15,17,16),(19,18,18,15));
-
 --9 beams. 8 expected + one with equal delays THIS ONE HAS THE CHANNELS IN THE WRONG ORDER... should be (ch3 ch2 ch1 ch0), instead thought (ch0,ch1,ch2,ch3)
 --constant beam_delays : antenna_delays:=	((32,32,32,32),(15,33,53,73),(15,31,49,66),(15,28,43,57),(15,25,36,46),
 --	(15,21,30,36),(15,18,23,25),(15,15,17,16),(19,18,18,15));
-	
-constant beam_delays:antenna_delays:=	((32,32,32,32),(73,53,33,15),(66,49,31,15),(57,43,28,15),
-	(46,36,25,15),(36,30,21,15),(25,23,18,15),(16,17,15,15),(15,18,18,19));
+
+--beam zero points up at 60 deg. beam 7 points down at 60. beam 8 is flat inputs
+constant beam_delays:antenna_delays:=	((32,32,32,32),(15,17,17,18),(18,18,15,15),(27,23,18,15),(36,30,22,15),(47,37,25,15),(57,43,29,15),(65,49,32,15),(72,53,34,15));
 
 type interpolated_data_array is array(3 downto 0, interp_data_length-1 downto 0) of signed(7 downto 0);
 signal interp_data: interpolated_data_array;
+
+type temp_interp is array (3 downto 0) of std_logic_vector(127 downto 0);
+signal temp_int: temp_interp;
 
 type interpolated_buffer is array(3 downto 0, interp_data_length-1 downto 0) of signed(15 downto 0);
 signal interp_buffer: interpolated_buffer;
@@ -92,10 +85,6 @@ signal interp_buffer: interpolated_buffer;
 type thresh_input is array (num_beams-1 downto 0) of unsigned(input_power_thesh_bits-1 downto 0);
 signal input_trig_thresh : thresh_input;
 signal input_servo_thresh : thresh_input;
-
---streaming buffer needed for advanced interpolation
---type streaming_data_array is array(7 downto 0) of std_logic_vector((streaming_buffer_length*8-1) downto 0);
---signal streaming_data : streaming_data_array := (others=>(others=>'0')); --pipeline data
 
 --short streaming buffer for linear interp
 type streaming_data_array is array(3 downto 0, streaming_buffer_length-1 downto 0) of signed(7 downto 0);
@@ -124,7 +113,7 @@ signal avg_power: power_array; --average power (power_sum shifted down by log2(3
 signal latched_power_out: power_array; 
 
 --threshold offset in case thresholds saturate over 4095
-signal threshold_offset: unsigned(11 downto 0):=x"bb8";
+signal threshold_offset: unsigned(11 downto 0):=x"000";
 
 --mask of which beam triggers/servos
 signal triggering_beam: std_logic_vector(num_beams-1 downto 0):=(others=>'0');
@@ -164,13 +153,6 @@ signal trig_array_for_scalars : std_logic_vector (2*(num_beams+1)-1 downto 0);
 --output for triggering beams for metadata
 signal trig_bits_metadata: std_logic_vector(num_beams-1 downto 0);
 
-
---unused
---constant coinc_window_int	: integer := 1; --//num of clk_data_i periods
---signal is_there_a_trigger: std_logic_vector(num_beams-1 downto 0);
---signal is_there_a_servo: std_logic_vector(num_beams-1 downto 0);
-
-
 --------------
 component signal_sync is
 port(
@@ -189,87 +171,103 @@ port(
    out_clkB		: out	std_logic);
 end component;
 
-component power_lut_7 is --7 bit lut for calculating power. seems to take up a number of allm
+component power_lut_7 is --7 bit lut for calculating power
 port(
 		clk_i    : in std_logic;
 		a			: in	signed(6 downto 0);
 		z			: out	unsigned(13 downto 0));
 end component;
+
 --------------
 
 begin
 ------------------------------------------------
 
---shift new samples in and subtract the baseline
+--buffer samples into the phased trigger module
 proc_pipeline_data: process(clk_data_i,internal_phased_trig_en)
 begin
 	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
-		--ch 0
+	
+		--pull new data in
+		for i in 0 to 3 loop
+			streaming_data(0,i)<=signed(unsigned(ch0_data_i(8*(i+1)-1 downto 8*(i)))-baseline);
+			streaming_data(1,i)<=signed(unsigned(ch1_data_i(8*(i+1)-1 downto 8*(i)))-baseline);
+			streaming_data(2,i)<=signed(unsigned(ch2_data_i(8*(i+1)-1 downto 8*(i)))-baseline);
+			streaming_data(3,i)<=signed(unsigned(ch3_data_i(8*(i+1)-1 downto 8*(i)))-baseline);
+		end loop;
+				
 		--shift the data
 		for i in 4 to streaming_buffer_length-1 loop
 			streaming_data(0,i)<=streaming_data(0,i-4);
-		end loop;
-		
-		--pull new data in
-		for i in 0 to 3 loop
-			streaming_data(0,i)<=signed(ch0_data_i(8*(i+1)-1 downto 8*(i)))-baseline;
-		end loop;
-		
-		--ch 1
-		for i in 4 to streaming_buffer_length-1 loop
 			streaming_data(1,i)<=streaming_data(1,i-4);
-		end loop;
-		
-		for i in 0 to 3 loop
-			streaming_data(1,i)<=signed(ch1_data_i(8*(i+1)-1 downto 8*(i)))-baseline;
-		end loop;
-		
-		--ch 2
-		for i in 4 to streaming_buffer_length-1 loop
 			streaming_data(2,i)<=streaming_data(2,i-4);
-		end loop;
-		
-		for i in 0 to 3 loop
-			streaming_data(2,i)<=signed(ch2_data_i(8*(i+1)-1 downto 8*(i)))-baseline;
-		end loop;
-		
-		--ch 3
-		for i in 4 to streaming_buffer_length-1 loop
 			streaming_data(3,i)<=streaming_data(3,i-4);
-		end loop;
-		
-		for i in 0 to 3 loop
-		 streaming_data(3,i)<=signed(ch3_data_i(8*(i+1)-1 downto 8*(i)))-baseline;
 		end loop;
 	end if;
 end process;
 
+
+
+--xinterp0 : entity work.cic_interpolation
+--port map(
+--	rst_i			=> rst_i,
+--	clk_i			=> clk_data_i,
+--	enable_i		=> internal_phased_trig_en,
+--	ch_data_i	=> ch0_data_i(31 downto 0),
+--	ch_data_o	=> temp_int(0)
+--);
+--xinterp1 : entity work.cic_interpolation
+--port map(
+--	rst_i			=> rst_i,
+--	clk_i			=> clk_data_i,
+--	enable_i		=> internal_phased_trig_en,
+--	ch_data_i	=> ch1_data_i(31 downto 0),
+--	ch_data_o	=> temp_int(1)
+--);
+--xinterp2 : entity work.cic_interpolation
+--port map(
+--	rst_i			=> rst_i,
+--	clk_i			=> clk_data_i,
+--	enable_i		=> internal_phased_trig_en,
+--	ch_data_i	=> ch2_data_i(31 downto 0),
+--	ch_data_o	=> temp_int(2)
+--);
+--xinterp3 : entity work.cic_interpolation
+--port map(
+--	rst_i			=> rst_i,
+--	clk_i			=> clk_data_i,
+--	enable_i		=> internal_phased_trig_en,
+--	ch_data_i	=> ch3_data_i(31 downto 0),
+--	ch_data_o	=> temp_int(3)
+--);
+
+--assign_interp: process(clk_data_i)
+--begin
+--	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
+--	for i in 0 to 3 loop
+--		for j in 0 to 15 loop
+--			interp_data(i,j)<=signed(temp_int(i)(8*(j+1)-1 downto 8*j));
+--		end loop;
+--	end loop;
+--	end if;
+--end process;
+			
 --linear interpolation. Only interpolate between the 4(+1 from the last block) samples coming in
 proc_interpolate: process(clk_data_i, internal_phased_trig_en)
 begin
 	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then
-		--first pull off the samples we need. 
+
 		for i in 0 to 3 loop --loop over channels
 			
-			--interpolate the samples coming in
 			for j in 0 to 4*interp_factor-1 loop
-	
+		
+				--linear interpolate the samples coming in and keep known samples
 				if (j mod interp_factor) = 0 then
 					interp_data(i,j)<=streaming_data(i,j / interp_factor);--known samples dont need interpolation
 				else
 					interp_data(i,j)<=resize((streaming_data(i,j/4)+(streaming_data(i,j/4+1)-streaming_data(i,j/4))*(j mod interp_factor)/interp_factor),8);--I hope it does the shift in the compiler (pow od 2.)
-					--would be nice if didn't have to buffer then take slice
-				end if;
 
-					
-				--if (j mod interp_factor) = 0 then
-				--	interp_buffer(i,j)<=resize(streaming_data(i,j / interp_factor),16);--known samples dont need interpolation
-				--else
-				--	interp_buffer(i,j)<=(streaming_data(i,j/4)+(streaming_data(i,j/4+1)-streaming_data(i,j/4))*(j mod interp_factor)/interp_factor);--I hope it does the shift in the compiler (pow od 2.)
-					--would be nice if didn't have to buffer then take slice
-				--end if;
-				--interp_data(i,j)<=resize(interp_buffer(i,j),8);
-				
+				end if;				
 			end loop;
 			
 			--shift the interpolated samples so we don't need to recalculate
@@ -284,29 +282,56 @@ end process;
 --do phasing to calculate the coherently summed waveforms
 proc_phasing: process(clk_data_i,internal_phased_trig_en)
 begin
-	if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then 
-		for i in 0 to num_beams-1 loop --loop over beams
-			for j in 0 to phased_sum_length-1 loop
+	--if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then 
+		--for i in 0 to num_beams-1 loop --loop over beams
+			--for j in 0 to phased_sum_length-1 loop
+			
 			   --calculate temp phased sum waveforms with larger data size
-				phased_beam_waves(i,j)<=resize(resize(interp_data(0,beam_delays(i,0)+(j-15)),10)
-					+resize(interp_data(1,beam_delays(i,1)+(j-15)),10)
-					+resize(interp_data(2,beam_delays(i,2)+(j-15)),10)
-					+resize(interp_data(3,beam_delays(i,3)+(j-15)),10),7);
+				--phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(i,0)+(j-15)),10)
+				--	+resize(interp_data(1,beam_delays(i,1)+(j-15)),10)
+				--	+resize(interp_data(2,beam_delays(i,2)+(j-15)),10)
+				--	+resize(interp_data(3,beam_delays(i,3)+(j-15)),10);
+
 				
-				--saturate low and high for 7 bit LUT
+				--saturate low and high for 7 bit LUT (more costly than limiting input bits to 5 - (32 adc) but the channels are a bit diff so maybe this is better)
 				--if(to_integer(phased_beam_waves_buff(i,j))>63) then
 				--	phased_beam_waves(i,j)<=b"0111111";--saturate max
 				--elsif(to_integer(phased_beam_waves_buff(i,j))<-63) then
 				--  phased_beam_waves(i,j)<=b"1000000"; --saturate min
 				--else
-				--	phased_beam_waves(i,j)<=resize(phased_beam_waves_buff(i,j),7); --this can be 10, 9 fits in a 1/4 of dsp. the rest of the calculations souldnt overflow
+				--	phased_beam_waves(i,j)<=resize(phased_beam_waves_buff(i,j),7); 
 				--end if;	
 				
-			end loop;
+			--end loop;
+		--end loop;
+	--end if;
+	
+		
+	for i in 0 to num_beams-1 loop --loop over beams
+		for j in 0 to phased_sum_length-1 loop
+			phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(i,0)+(j-15)),10)
+				+resize(interp_data(1,beam_delays(i,1)+(j-15)),10)
+				+resize(interp_data(2,beam_delays(i,2)+(j-15)),10)
+				+resize(interp_data(3,beam_delays(i,3)+(j-15)),10);
+				
+			if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then 
+			
+				--saturate low and high for 7 bit LUT (more costly than limiting input bits to 5 - (32 adc) but the channels are a bit diff so maybe this is better)
+				if(to_integer(phased_beam_waves_buff(i,j))>63) then
+					phased_beam_waves(i,j)<=b"0111111";--saturate max
+				elsif(to_integer(phased_beam_waves_buff(i,j))<-63) then
+				  phased_beam_waves(i,j)<=b"1000000"; --saturate min
+				else
+					phased_beam_waves(i,j)<=resize(phased_beam_waves_buff(i,j),7); 
+				end if;	
+			end if;
 		end loop;
-	end if;
+	end loop;
+	
+	
 end process;
 
+--calculate the power
 --this just uses a LUT in logic to find the power from a signed value. If it synthesizes as BRAM is would be too slow but is okay as sync_ram.
 DO_POWER_BEAM : for i in 0 to num_beams-1 generate
 	DO_POWER_SAMPLE : for j in 0 to phased_sum_length-1 generate
@@ -334,6 +359,7 @@ end generate;
 --end process;
 --------------
 
+--do the power integration
 proc_avg_beam_power : process(clk_data_i)
 begin		
 
@@ -341,7 +367,7 @@ begin
 		for i in 0 to num_beams-1 loop
 				
 			--manually type all these... not sure how to make is a loop.
-			--also split in half for timing I wonder if I split this up if it will use less resources?
+			--also split in half for timing
 			power_sum_lower(i)<=resize(phased_power(i,0),num_power_bits)+resize(phased_power(i,1),num_power_bits)+resize(phased_power(i,2),num_power_bits)
 				+resize(phased_power(i,3),num_power_bits)+resize(phased_power(i,4),num_power_bits)+resize(phased_power(i,5),num_power_bits)
 				+resize(phased_power(i,6),num_power_bits)+resize(phased_power(i,7),num_power_bits)+resize(phased_power(i,8),num_power_bits)
@@ -363,7 +389,7 @@ begin
 	end if;
 end process;
 
---this is a mess... sorry
+--process the actual trigger
 proc_get_triggering_beams : process(clk_data_i,rst_i)
 begin
 	if rst_i = '1' then

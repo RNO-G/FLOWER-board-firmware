@@ -34,16 +34,17 @@ architecture rtl of fancy_interpolation is
 
 constant num_stages:integer:=4;
 
-type coeffs_t is array(2 downto 0) of integer;
-constant coeffs: coeffs_t := (-4,72,-4);
-constant cic_gain: integer:=10;
+type coeffs_t is array(2 downto 0) of signed(7 downto 0);
+constant coeffs: coeffs_t := (to_signed(-4,8),to_signed(72,8),to_signed(-4,8)); --(-1/16, 9/8, -1/16) * 64?
+constant comp_gain: integer:=64;
+constant cic_gain: integer:=64;
 
 type input_buffer_t is array(11 downto 0) of signed(7 downto 0);
 type cic_temp_t is array(4 downto 0) of signed(19 downto 0);
 type cic_up_temp_t is array(16 downto 0) of signed(19 downto 0);
 type output_buffer_t is array(15 downto 0) of signed(7 downto 0);
 --type comp_out is array(15 downto 0) of signed(7 downto 0);
-type mid_comp_t is array (3 downto 0) of signed(15 downto 0);
+type mid_comp_t is array (4 downto 0) of signed(15 downto 0);
 type post_comp_t is array (7 downto 0) of signed(7 downto 0);
 
 
@@ -64,7 +65,7 @@ signal int_2:cic_up_temp_t:=(others=>x"00000");
 signal int_3:cic_up_temp_t:=(others=>x"00000");
 signal int_4:cic_up_temp_t:=(others=>x"00000");
 
-signal post_int:cic_up_temp_t:=(others=>x"00000");
+signal post_int:output_buffer_t:=(others=>x"00");
 signal up_output:output_buffer_t:=(others=>x"00");
 
 begin
@@ -77,13 +78,13 @@ begin
 	elsif rising_edge(clk_i) then
 	
 		--buffer in samples
-		for i in 1 to 4 loop
-			input_sig(i-1)<=signed(ch_data_i(8*i-1 downto 8*(i-1)))-128;
+		for i in 0 to 3 loop
+			input_sig(i)<=signed(ch_data_i(8*(i+1)-1 downto 8*(i)))-128;
 		end loop;
 		
 		--move samples deeper
 		input_sig(7 downto 4)<=input_sig(3 downto 0);
-		--input_sig(11 downto 8)<=input_sig(7 downto 4);
+		input_sig(11 downto 8)<=input_sig(7 downto 4);
 		
 	end if;
 end process;
@@ -91,18 +92,20 @@ end process;
 compensator: process(clk_i,rst_i,enable_i)
 begin
 	--assign bit shift to divide -- might be able to just divide on mid comp line since its pow of 2
-		mid_comp(0)<=coeffs(2)*input_sig(4)+coeffs(1)*input_sig(3)+coeffs(0)*input_sig(2);
-		mid_comp(1)<=coeffs(2)*input_sig(5)+coeffs(1)*input_sig(4)+coeffs(0)*input_sig(3);
-		mid_comp(2)<=coeffs(2)*input_sig(6)+coeffs(1)*input_sig(5)+coeffs(0)*input_sig(4);
-		mid_comp(3)<=coeffs(2)*input_sig(7)+coeffs(1)*input_sig(6)+coeffs(0)*input_sig(5);	
+	
 	
 	if rst_i='1' then
 		mid_comp<=(others=>x"0000");
 		post_comp<=(others=>x"00");
 		
-	elsif rising_edge(clk_i) and enable_i ='1' then--there's going to be a bunch of resize things here
-		for i in 0 to 4 loop
-			post_comp(i)<=resize(mid_comp(i)(15 downto 6),8);
+	elsif rising_edge(clk_i) and enable_i ='1' then
+		mid_comp(0)<=coeffs(2)*input_sig(4)+coeffs(1)*input_sig(3)+coeffs(0)*input_sig(2);
+		mid_comp(1)<=coeffs(2)*input_sig(5)+coeffs(1)*input_sig(4)+coeffs(0)*input_sig(3);
+		mid_comp(2)<=coeffs(2)*input_sig(6)+coeffs(1)*input_sig(5)+coeffs(0)*input_sig(4);
+		mid_comp(3)<=coeffs(2)*input_sig(7)+coeffs(1)*input_sig(6)+coeffs(0)*input_sig(5);
+		for i in 0 to 3 loop
+			--post_comp(i)<=resize(mid_comp(i)/comp_gain,8); or post_comp(i)<=resize(mid_comp(i)(15 downto log2(comp_gain),8);
+			post_comp(i)<=resize(signed(mid_comp(i)(15 downto 5)),8);
 			post_comp(i+4)<=post_comp(i);
 		end loop;
 		
@@ -115,7 +118,7 @@ begin
 	if rst_i='1' then
 
 		post_up<=(others=>x"00000");
-		post_int<=(others=>x"00000");
+		post_int<=(others=>x"00");
 		
 		comb_1<=(others=>x"00000");
 		comb_2<=(others=>x"00000");
@@ -128,22 +131,11 @@ begin
 		int_4<=(others=>x"00000");
 		
 		ch_data_o<=(others=>'0');
-		
-	elsif enable_i ='1' then
 
-		--do the upsampling
-		--since this just pads zeros to the next bits of logic this can probably be unclocked
-		for i in 1 to 16 loop
-			if (i mod 4) =0 then
-				post_up(i)<=comb_4(i/4);
-			else 
-				post_up(i)<=x"00000";
-			end if;
-		end loop;
-		
 	elsif rising_edge(clk_i) and enable_i='1' then
-		
+
 		--comb stage - 4 stage can process 4 samples streamed at once (if adds keep up)
+		--check order
 		for i in 0 to 3 loop
 			comb_1(i)<=resize(post_comp(i),20)-resize(post_comp(i+1),20);
 			comb_2(i)<=comb_1(i)-comb_1(i+1);
@@ -156,24 +148,32 @@ begin
 		comb_3(4)<=comb_3(0);
 		comb_4(4)<=comb_4(0);
 		
-		
-		--int stage (complicated)
+		--upsample
 		for i in 0 to 16 loop
-			int_1(i)<=post_up(i)+int_1(i+1);
-			int_2(i)<=int_1(i)+int_2(i+1);
-			int_3(i)<=int_2(i)+int_3(i+1);
-			int_4(i)<=int_3(i)+int_4(i+1);
+			if (i mod 4) = 0 then
+				post_up(i)<=comb_4(i/4);
+			else 
+				post_up(i)<=x"00000";
+			end if;
 		end loop;
 		
-		int_1(4)<=int_1(0);
-		int_2(4)<=int_2(0);
-		int_3(4)<=int_3(0);
-		int_4(4)<=int_4(0);
+		--int stage
+		for i in 0 to 15 loop
+			int_1(i)<=post_up(i)+int_1(i+1); 
+			int_2(i)<=int_1(i)+int_2(i+1);
+			int_3(i)<=int_2(i)+int_3(i+1);
+			int_4(i)<=int_3(i)+int_4(i+1); 
+		end loop;
+		
+		int_1(16)<=int_1(0);
+		int_2(16)<=int_2(0);
+		int_3(16)<=int_3(0);
+		int_4(16)<=int_4(0);
 		
 		--apply gain and send out
-		for i in 1 to 16 loop
-			post_int(i-1)<=int_4(i-1); --do other things like scale
-			ch_data_o(i*8-1 downto i*8)<=std_logic_vector(resize(post_int(i-1),8));
+		for i in 0 to 15 loop
+			--post_int(i)<=resize(signed(int_4(i)(16 downto 6)),8);	--int_4(i)/cic_gain; --do other things like scale
+			ch_data_o(8*(i+1)-1 downto i*8)<=std_logic_vector(resize(signed(int_4(i)(16 downto 6)),8));
 		end loop;
 		
 	end if;
