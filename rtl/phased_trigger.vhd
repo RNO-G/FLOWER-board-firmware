@@ -56,12 +56,10 @@ constant baseline: unsigned(7 downto 0) := x"80";
 constant phased_sum_bits: integer := 7; --8. trying 7 bit lut
 constant phased_sum_length: integer := 32; --8 real samples ... not sure if it should be 8 or 16. longer windows smooths things. shorter window gives higher peak
 constant phased_sum_power_bits: integer := 14;--16 with calc. trying 7-> 14 lut
-constant num_power_bits: integer := 24;
-constant power_sum_bits:	integer := 24; --actually 25 but this fits into the io regs
+constant num_power_bits: integer := 20;
+constant power_sum_bits:	integer := 20; --actually 25 but this fits into the io regs
 constant input_power_thesh_bits:	integer := 12;
 constant power_length: integer := 12;
-constant power_low_bit: integer := 0; --might need to be 1. tried making it adjustable but didnt work. lab based sig starts triggering at 4000 threshold
-constant power_high_bit: integer := power_low_bit+power_length-1;
 constant num_div: integer := 5;--can be calculated using -> integer(log2(real(phased_sum_length)));
 constant pad_zeros: std_logic_vector(num_div-1 downto 0):=(others=>'0');
 
@@ -308,14 +306,14 @@ begin
 	
 		
 	for i in 0 to num_beams-1 loop --loop over beams
-		for j in 0 to phased_sum_length-1 loop
+		for j in 0 to 15 loop --for j in 16 to phased_sum_length-1 loop
+			--I think I can reduce this by only calc 16 and then buffering the previous 16
 			phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(i,0)+(j-15)),10)
 				+resize(interp_data(1,beam_delays(i,1)+(j-15)),10)
 				+resize(interp_data(2,beam_delays(i,2)+(j-15)),10)
 				+resize(interp_data(3,beam_delays(i,3)+(j-15)),10);
 				
 			if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then 
-			
 				--saturate low and high for 7 bit LUT (more costly than limiting input bits to 5 - (32 adc) but the channels are a bit diff so maybe this is better)
 				if(to_integer(phased_beam_waves_buff(i,j))>63) then
 					phased_beam_waves(i,j)<=b"0111111";--saturate max
@@ -326,6 +324,11 @@ begin
 				end if;	
 			end if;
 		end loop;
+		for j in 16 to phased_sum_length-1 loop
+			if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then 
+				phased_beam_waves(i,j)<=phased_beam_waves(i,j-16);
+			end if;
+		end loop;
 	end loop;
 	
 	
@@ -334,7 +337,7 @@ end process;
 --calculate the power
 --this just uses a LUT in logic to find the power from a signed value. If it synthesizes as BRAM is would be too slow but is okay as sync_ram.
 DO_POWER_BEAM : for i in 0 to num_beams-1 generate
-	DO_POWER_SAMPLE : for j in 0 to phased_sum_length-1 generate
+	DO_POWER_SAMPLE : for j in 0 to 15 generate --for j in 0 to phased_sum_length-1 generate
 		xPOWERLUT : power_lut_7
 		port map(
 		clk_i => clk_data_i, --tried clock but this looks like bram (too slow), unclocked should just be LUT
@@ -342,6 +345,18 @@ DO_POWER_BEAM : for i in 0 to num_beams-1 generate
 		z				=> phased_power(i,j));
 	end generate;
 end generate;
+
+proc_move_power:process(clk_data_i)
+begin
+	if rising_edge(clk_data_i) and internal_phased_trig_en='1' then
+		for i in 0 to num_beams-1 loop --loop over beams
+			for j in 0 to 15 loop --for j in 16 to phased_sum_length-1 loop
+				phased_power(i,j+16)<=phased_power(i,j);
+			end loop;
+		end loop;
+	end if;
+end process;
+		
 
 --keep for posterity
 --this uses dsp's + logic to calculate the power. DSP might be needed for different interp. and uses as much logic anyway. 
@@ -374,12 +389,13 @@ begin
 				+resize(phased_power(i,9),num_power_bits)+resize(phased_power(i,10),num_power_bits)+resize(phased_power(i,11),num_power_bits)
 				+resize(phased_power(i,12),num_power_bits)+resize(phased_power(i,13),num_power_bits)+resize(phased_power(i,14),num_power_bits)
 				+resize(phased_power(i,15),num_power_bits);
-			power_sum_upper(i)<=	resize(phased_power(i,16),num_power_bits)+resize(phased_power(i,17),num_power_bits)
-				+resize(phased_power(i,18),num_power_bits)+resize(phased_power(i,19),num_power_bits)+resize(phased_power(i,20),num_power_bits)
-				+resize(phased_power(i,21),num_power_bits)+resize(phased_power(i,22),num_power_bits)+resize(phased_power(i,23),num_power_bits) --all these are unsigned so add should be ok
-				+resize(phased_power(i,24),num_power_bits)+resize(phased_power(i,25),num_power_bits)+resize(phased_power(i,26),num_power_bits) --all these are unsigned so add should be ok
-				+resize(phased_power(i,27),num_power_bits)+resize(phased_power(i,28),num_power_bits)+resize(phased_power(i,29),num_power_bits) --all these are unsigned so add should be ok
-				+resize(phased_power(i,30),num_power_bits)+resize(phased_power(i,31),num_power_bits); --all these are unsigned so add should be ok
+			power_sum_upper(i)<=power_sum_lower(i);
+			--power_sum_upper(i)<=	resize(phased_power(i,16),num_power_bits)+resize(phased_power(i,17),num_power_bits)
+			--	+resize(phased_power(i,18),num_power_bits)+resize(phased_power(i,19),num_power_bits)+resize(phased_power(i,20),num_power_bits)
+			--	+resize(phased_power(i,21),num_power_bits)+resize(phased_power(i,22),num_power_bits)+resize(phased_power(i,23),num_power_bits) --all these are unsigned so add should be ok
+			--	+resize(phased_power(i,24),num_power_bits)+resize(phased_power(i,25),num_power_bits)+resize(phased_power(i,26),num_power_bits) --all these are unsigned so add should be ok
+			--	+resize(phased_power(i,27),num_power_bits)+resize(phased_power(i,28),num_power_bits)+resize(phased_power(i,29),num_power_bits) --all these are unsigned so add should be ok
+			--	+resize(phased_power(i,30),num_power_bits)+resize(phased_power(i,31),num_power_bits); --all these are unsigned so add should be ok
 			power_sum(i)<=power_sum_lower(i)+power_sum_upper(i);
 
 		   --get the average power (bit selecting on the ones used)		
@@ -431,7 +447,7 @@ begin
 		--this is the core of figuring out if a trigger needs to happen
 		if (to_integer(unsigned(triggering_beam AND internal_trigger_beam_mask))>0) and (internal_phased_trig_en='1') then
 			phased_trigger_reg(0)<='1';
-			power_o<=std_logic_vector(latched_power_out(0)(22 downto 0));
+			power_o(num_power_bits-1 downto 0)<=std_logic_vector(latched_power_out(0)(num_power_bits-1 downto 0));
 			phased_trig_metadata_o<=triggering_beam AND internal_trigger_beam_mask;
 		else
 			phased_trigger_reg(0)<='0';
@@ -460,7 +476,7 @@ begin
 	end if;
 end process;
 
---process 12 bit input thresholds so by 24 bits with some offset in case of saturation
+--process 12 bit input thresholds with some threshold offset (defined in software) if needed (likely not needed)
 proc_threshold_set:process(clk_data_i)
 begin
    if rising_edge(clk_data_i) then
