@@ -69,10 +69,16 @@ type antenna_delays is array (num_beams-1 downto 0,num_channels-1 downto 0) of i
 --	(15,21,30,36),(15,18,23,25),(15,15,17,16),(19,18,18,15));
 
 --beam zero points up at 60 deg. beam 7 points down at 60. beam 8 is flat inputs
+--n=1.8 
 constant beam_delays:antenna_delays:=	((32,32,32,32),(15,17,17,18),(18,18,15,15),(27,23,18,15),(36,30,22,15),(47,37,25,15),(57,43,29,15),(65,49,32,15),(72,53,34,15));
+--n=1.75 
+--constant beam_delays:antenna_delays:=	((32,32,32,32),(15,17,16,18),(19,18,16,15),(27,24,19,15),(37,30,22,15),(47,37,25,15),(56,43,28,15),(64,49,31,15),(71,53,33,15));
 
 type interpolated_data_array is array(3 downto 0, interp_data_length-1 downto 0) of signed(7 downto 0);
 signal interp_data: interpolated_data_array;
+
+signal input_data: std_logic_vector(127 downto 0);
+signal output_data: std_logic_vector(511 downto 0);
 
 type temp_interp is array (3 downto 0) of std_logic_vector(127 downto 0);
 signal temp_int: temp_interp;
@@ -176,6 +182,19 @@ port(
 		z			: out	unsigned(13 downto 0));
 end component;
 
+component fir_upsampling is
+port(
+		clk: std_logic;
+		reset_n: in std_logic;
+		ast_sink_data: in std_logic_vector(127 downto 0);
+		ast_sink_valid:in std_logic;
+		ast_sink_error:in std_logic_vector(1 downto 0);
+		ast_source_data: out std_logic_vector(511 downto 0);
+		ast_source_valid: out std_logic;
+		ast_source_error: out std_logic_vector(1 downto 0)
+		);
+end component;
+
 --------------
 
 begin
@@ -206,7 +225,8 @@ end process;
 
 
 
---xinterp0 : entity work.cic_interpolation
+
+--xinterp0 : entity work.fancy_interpolation
 --port map(
 --	rst_i			=> rst_i,
 --	clk_i			=> clk_data_i,
@@ -214,7 +234,7 @@ end process;
 --	ch_data_i	=> ch0_data_i(31 downto 0),
 --	ch_data_o	=> temp_int(0)
 --);
---xinterp1 : entity work.cic_interpolation
+--xinterp1 : entity work.fancy_interpolation
 --port map(
 --	rst_i			=> rst_i,
 --	clk_i			=> clk_data_i,
@@ -222,7 +242,7 @@ end process;
 --	ch_data_i	=> ch1_data_i(31 downto 0),
 --	ch_data_o	=> temp_int(1)
 --);
---xinterp2 : entity work.cic_interpolation
+--xinterp2 : entity work.fancy_interpolation
 --port map(
 --	rst_i			=> rst_i,
 --	clk_i			=> clk_data_i,
@@ -230,7 +250,7 @@ end process;
 --	ch_data_i	=> ch2_data_i(31 downto 0),
 --	ch_data_o	=> temp_int(2)
 --);
---xinterp3 : entity work.cic_interpolation
+--xinterp3 : entity work.fancy_interpolation
 --port map(
 --	rst_i			=> rst_i,
 --	clk_i			=> clk_data_i,
@@ -250,6 +270,35 @@ end process;
 --	end if;
 --end process;
 			
+--generate
+xUpsampling:fir_upsampling
+port map(
+		clk=>clk_data_i,
+		reset_n=>not rst_i,
+		ast_sink_data=>input_data,
+		ast_sink_valid=>internal_phased_trig_en,
+		ast_sink_error=>b"00",
+		ast_source_data=>output_data,
+		ast_source_valid=>open,
+		ast_source_error=>open
+		);
+
+--process inputs and outputs
+proc_process_fir_upsampling: process(clk_data_i,rst_i,internal_phased_trig_en)
+begin
+	if rising_edge(clk_data_i) then
+		for ch in 0 to 3 loop
+			for sample in 0 to 3 loop
+				input_data(ch*32+sample*8+7 downto ch*32+sample*8)<=std_logic_vector(streaming_data(ch,sample));
+			end loop;
+			
+			for up_sample in 0 to 15 loop
+				interp_data(ch,up_sample)<=signed(output_data(ch*128+up_sample*8+7 downto ch*128+up_sample*8));
+			end loop;
+		end loop;
+	end if;
+end process;
+			
 --linear interpolation. Only interpolate between the 4(+1 from the last block) samples coming in
 proc_interpolate: process(clk_data_i, internal_phased_trig_en)
 begin
@@ -257,16 +306,15 @@ begin
 
 		for i in 0 to 3 loop --loop over channels
 			
-			for j in 0 to 4*interp_factor-1 loop
-		
-				--linear interpolate the samples coming in and keep known samples
-				if (j mod interp_factor) = 0 then
-					interp_data(i,j)<=streaming_data(i,j / interp_factor);--known samples dont need interpolation
-				else
-					interp_data(i,j)<=resize((streaming_data(i,j/4)+(streaming_data(i,j/4+1)-streaming_data(i,j/4))*(j mod interp_factor)/interp_factor),8);--I hope it does the shift in the compiler (pow od 2.)
-
-				end if;				
-			end loop;
+			--for j in 0 to 4*interp_factor-1 loop
+			--
+			--	--linear interpolate the samples coming in and keep known samples
+			--	if (j mod interp_factor) = 0 then
+			--		interp_data(i,j)<=streaming_data(i,j / interp_factor);--known samples dont need interpolation
+			--	else
+			--		interp_data(i,j)<=resize((streaming_data(i,j/4)+(streaming_data(i,j/4+1)-streaming_data(i,j/4))*(j mod interp_factor)/interp_factor),8);--I hope it does the shift in the compiler (pow od 2.)
+			--	end if;				
+			--end loop;
 			
 			--shift the interpolated samples so we don't need to recalculate
 			for j in 4*interp_factor to interp_data_length-1 loop
@@ -560,7 +608,7 @@ TrigToScalers	:	 for i in 0 to num_beams-1 generate
 	port map(
 		clkA 			=> clk_data_i,
 		clkB			=> clk_i,
-		in_clkA		=> triggering_beam(i) and internal_trigger_beam_mask(i),
+		in_clkA		=> triggering_beam(i),-- and internal_trigger_beam_mask(i),
 		busy_clkA	=> open,
 		out_clkB		=> trig_bits_o(i+1));
 end generate TrigToScalers;
@@ -580,7 +628,7 @@ ServoToScalers	:	 for i in 0 to num_beams-1 generate
 	port map(
 		clkA 			=> clk_data_i,
 		clkB			=> clk_i,
-		in_clkA		=> servoing_beam(i) and internal_trigger_beam_mask(i),
+		in_clkA		=> servoing_beam(i),-- and internal_trigger_beam_mask(i),
 		busy_clkA	=> open,
 		out_clkB		=> trig_bits_o(i+num_beams+2));
 end generate ServoToScalers;
