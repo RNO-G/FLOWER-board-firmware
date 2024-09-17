@@ -5,7 +5,7 @@ import os
 make_plots=False
 
 c=3e8
-n=1.8
+n=1.75
 sampling_rate=118e6*4
 int_factor=4
 int_rate=sampling_rate*int_factor
@@ -70,7 +70,7 @@ if make_plots:
     plt.close()
 
 
-num_beams=8
+num_beams=9
 beam_locs=np.linspace(-60,60,num_beams)
 print('beam locs',beam_locs)
 beam_lookback=np.zeros((4,num_beams))
