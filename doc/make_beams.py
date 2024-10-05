@@ -102,7 +102,14 @@ for i in range(num_beams):
         break
     print(',',end='')
 print(');',end='')
-print()
+print('\n\n')
 
-
-
+print('print out for python')
+print('[',end='')
+for i in range(num_beams):
+    print('[%i,%i,%i,%i]'%(beam_lookback[0][8-i],beam_lookback[1][8-i],beam_lookback[2][8-i],beam_lookback[3][8-i]),end='')
+    if i==num_beams-1:
+        break
+    print(',',end='')
+print(']',end='')
+print('\n\n')

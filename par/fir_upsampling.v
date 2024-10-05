@@ -82,17 +82,17 @@ endmodule
 // Retrieval info: 	<generic name="inputType" value="int" />
 // Retrieval info: 	<generic name="inputBitWidth" value="8" />
 // Retrieval info: 	<generic name="inputFracBitWidth" value="0" />
-// Retrieval info: 	<generic name="coeffSetRealValue" value="-0.0,-0.0,-0.0,0.0,1.0,1.0,1.0,-0.0,-2.0,-5.0,-4.0,0.0,9.0,20.0,29.0,32.0,29.0,20.0,9.0,0.0,-4.0,-5.0,-2.0,-0.0,1.0,1.0,1.0,0.0,-0.0,-0.0,-0.0" />
+// Retrieval info: 	<generic name="coeffSetRealValue" value="-0.0,-0.0,0.0,1.0,1.0,1.0,-0.0,-2.0,-5.0,-4.0,0.0,9.0,20.0,29.0,32.0,29.0,20.0,9.0,0.0,-4.0,-5.0,-2.0,-0.0,1.0,1.0,1.0,0.0,-0.0,-0.0" />
 // Retrieval info: 	<generic name="coeffSetRealValueImag" value="0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.0530093, -0.04498, 0.0, 0.0749693, 0.159034, 0.224907, 0.249809, 0.224907, 0.159034, 0.0749693, 0.0, -0.04498, -0.0530093, -0.0321283, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0" />
 // Retrieval info: 	<generic name="coeffScaling" value="none" />
 // Retrieval info: 	<generic name="coeffType" value="int" />
-// Retrieval info: 	<generic name="coeffBitWidth" value="6" />
+// Retrieval info: 	<generic name="coeffBitWidth" value="8" />
 // Retrieval info: 	<generic name="coeffFracBitWidth" value="0" />
 // Retrieval info: 	<generic name="coeffComplex" value="false" />
 // Retrieval info: 	<generic name="karatsuba" value="false" />
 // Retrieval info: 	<generic name="outType" value="int" />
 // Retrieval info: 	<generic name="outMSBRound" value="trunc" />
-// Retrieval info: 	<generic name="outMsbBitRem" value="4" />
+// Retrieval info: 	<generic name="outMsbBitRem" value="6" />
 // Retrieval info: 	<generic name="outLSBRound" value="trunc" />
 // Retrieval info: 	<generic name="outLsbBitRem" value="5" />
 // Retrieval info: 	<generic name="bankCount" value="1" />

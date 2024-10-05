@@ -83,15 +83,15 @@ architecture rtl of flower_top is
 	---------------------------------------
 	--//FIRMWARE DETAILS--
 	constant fw_version_maj	: std_logic_vector(7 downto 0)  := x"00";
-	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"0a";
+	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"0d";
 	constant fw_year			: std_logic_vector(11 downto 0) := x"7E8";
-	constant fw_month			: std_logic_vector(3 downto 0)  := x"8";
-	constant fw_day			: std_logic_vector(7 downto 0)  := x"18";
+	constant fw_month			: std_logic_vector(3 downto 0)  := x"a";
+	constant fw_day			: std_logic_vector(7 downto 0)  := x"04";
 	---------------------------------------
 	--//the following signals to/from Clock_Manager--
 	signal clock_internal_10MHz_sys		:	std_logic;	
 	signal clock_internal_10MHz_loc		:	std_logic;	
-	signal clock_internal_core				:	std_logic; --118MHz, presently. derived from system clock
+	signal clock_internal_core				:	std_logic; --1/4 f_s MHz (118MHz), presently. derived from system clock
 	signal clock_internal_2MHz				:	std_logic;		
 	signal clock_internal_1Hz				:	std_logic;		
 	signal clock_internal_10Hz				:	std_logic;		
@@ -249,7 +249,7 @@ begin
 		CLK_2MHz_o		=> clock_internal_2MHz,		
 		CLK_10MHz_loc_o=> clock_internal_10MHz_loc,
 		CLK_10MHz_sys_o=> clock_internal_10MHz_sys,
-		CLK_core_sys_o => clock_internal_core, --//118MHz at the moment
+		CLK_core_sys_o => clock_internal_core, --//118MHz
 		CLK_1Hz_o		=> clock_internal_1Hz,
 		CLK_10Hz_o		=> clock_internal_10Hz,
 		CLK_1kHz_o		=> clock_internal_1kHz,	

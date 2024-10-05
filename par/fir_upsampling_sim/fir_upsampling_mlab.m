@@ -18,10 +18,10 @@
 %MegaWizard Scaled Coefficient Values
 
 function  output = fir_upsampling_mlab(stimulation, bank);
- coef_matrix_in= [0,0,0,0,1,1,1,0,-2,-5,-4,0,9,20,29,32,29,20,9,0,-4,-5,-2,0,1,1,1,0,0,0,0];
+ coef_matrix_in= [0,0,0,1,1,1,0,-2,-5,-4,0,9,20,29,32,29,20,9,0,-4,-5,-2,0,1,1,1,0,0,0];
  INTER_FACTOR = 4;
  DECI_FACTOR  = 1;
- MSB_RM  = 4;
+ MSB_RM  = 6;
  MSB_TYPE  = 0;
  LSB_RM  = 5;
  LSB_TYPE  = 0;

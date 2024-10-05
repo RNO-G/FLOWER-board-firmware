@@ -42,9 +42,9 @@ entity fir_upsampling_tb is
     constant INTERP_FACTOR_c          : natural := 4;
     constant TOTAL_INCHANS_ALLOWED    : natural := PHYSCHANIN_c * CHANSPERPHYIN_c;
     constant TOTAL_OUTCHANS_ALLOWED   : natural := PHYSCHANOUT_c * CHANSPERPHYOUT_c;
-    constant NUM_OF_TAPS_c            : natural := 31;
-    constant TOTAL_EFF_COEF_c         : natural := 16;
-    constant COEFF_BIT_WIDTH_c        : natural := 6;
+    constant NUM_OF_TAPS_c            : natural := 29;
+    constant TOTAL_EFF_COEF_c         : natural := 15;
+    constant COEFF_BIT_WIDTH_c        : natural := 8;
     constant COEFF_BUS_DATA_WIDTH_c   : natural := 16;
     constant COEFF_BUS_ADDR_WIDTH   : natural := 4;
 
@@ -460,7 +460,7 @@ begin  -- process resetgen
     reset_design <= '1';
 
 
-    wait for tclk*31*2;
+    wait for tclk*29*2;
     reset_design <= '1';
     wait;
 end process reset_design_gen;

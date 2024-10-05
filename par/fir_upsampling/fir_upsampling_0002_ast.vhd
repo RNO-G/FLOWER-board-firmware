@@ -9,11 +9,11 @@ use work.auk_dspip_math_pkg_hpfir.all;
 entity fir_upsampling_0002_ast is
   generic (
         INWIDTH             : integer := 8;
-        OUT_WIDTH_UNTRIMMED : integer := 17;
+        OUT_WIDTH_UNTRIMMED : integer := 19;
         BANKINWIDTH         : integer := 0;
         REM_LSB_BIT_g       : integer := 5;
         REM_LSB_TYPE_g      : string := "trunc";
-        REM_MSB_BIT_g       : integer := 4;
+        REM_MSB_BIT_g       : integer := 6;
         REM_MSB_TYPE_g      : string := "trunc";
         PHYSCHANIN          : integer := 16;
         PHYSCHANOUT         : integer := 64;
@@ -212,70 +212,70 @@ real_passthrough : if COMPLEX_CONST = 1 generate
         xIn_15                : in std_logic_vector(8 - 1 downto 0);
         xOut_v               : out std_logic_vector(0 downto 0);
         xOut_c               : out std_logic_vector(7 downto 0);
-        xOut_0              : out std_logic_vector(17- 1 downto 0);
-        xOut_1              : out std_logic_vector(17- 1 downto 0);
-        xOut_2              : out std_logic_vector(17- 1 downto 0);
-        xOut_3              : out std_logic_vector(17- 1 downto 0);
-        xOut_4              : out std_logic_vector(17- 1 downto 0);
-        xOut_5              : out std_logic_vector(17- 1 downto 0);
-        xOut_6              : out std_logic_vector(17- 1 downto 0);
-        xOut_7              : out std_logic_vector(17- 1 downto 0);
-        xOut_8              : out std_logic_vector(17- 1 downto 0);
-        xOut_9              : out std_logic_vector(17- 1 downto 0);
-        xOut_10              : out std_logic_vector(17- 1 downto 0);
-        xOut_11              : out std_logic_vector(17- 1 downto 0);
-        xOut_12              : out std_logic_vector(17- 1 downto 0);
-        xOut_13              : out std_logic_vector(17- 1 downto 0);
-        xOut_14              : out std_logic_vector(17- 1 downto 0);
-        xOut_15              : out std_logic_vector(17- 1 downto 0);
-        xOut_16              : out std_logic_vector(17- 1 downto 0);
-        xOut_17              : out std_logic_vector(17- 1 downto 0);
-        xOut_18              : out std_logic_vector(17- 1 downto 0);
-        xOut_19              : out std_logic_vector(17- 1 downto 0);
-        xOut_20              : out std_logic_vector(17- 1 downto 0);
-        xOut_21              : out std_logic_vector(17- 1 downto 0);
-        xOut_22              : out std_logic_vector(17- 1 downto 0);
-        xOut_23              : out std_logic_vector(17- 1 downto 0);
-        xOut_24              : out std_logic_vector(17- 1 downto 0);
-        xOut_25              : out std_logic_vector(17- 1 downto 0);
-        xOut_26              : out std_logic_vector(17- 1 downto 0);
-        xOut_27              : out std_logic_vector(17- 1 downto 0);
-        xOut_28              : out std_logic_vector(17- 1 downto 0);
-        xOut_29              : out std_logic_vector(17- 1 downto 0);
-        xOut_30              : out std_logic_vector(17- 1 downto 0);
-        xOut_31              : out std_logic_vector(17- 1 downto 0);
-        xOut_32              : out std_logic_vector(17- 1 downto 0);
-        xOut_33              : out std_logic_vector(17- 1 downto 0);
-        xOut_34              : out std_logic_vector(17- 1 downto 0);
-        xOut_35              : out std_logic_vector(17- 1 downto 0);
-        xOut_36              : out std_logic_vector(17- 1 downto 0);
-        xOut_37              : out std_logic_vector(17- 1 downto 0);
-        xOut_38              : out std_logic_vector(17- 1 downto 0);
-        xOut_39              : out std_logic_vector(17- 1 downto 0);
-        xOut_40              : out std_logic_vector(17- 1 downto 0);
-        xOut_41              : out std_logic_vector(17- 1 downto 0);
-        xOut_42              : out std_logic_vector(17- 1 downto 0);
-        xOut_43              : out std_logic_vector(17- 1 downto 0);
-        xOut_44              : out std_logic_vector(17- 1 downto 0);
-        xOut_45              : out std_logic_vector(17- 1 downto 0);
-        xOut_46              : out std_logic_vector(17- 1 downto 0);
-        xOut_47              : out std_logic_vector(17- 1 downto 0);
-        xOut_48              : out std_logic_vector(17- 1 downto 0);
-        xOut_49              : out std_logic_vector(17- 1 downto 0);
-        xOut_50              : out std_logic_vector(17- 1 downto 0);
-        xOut_51              : out std_logic_vector(17- 1 downto 0);
-        xOut_52              : out std_logic_vector(17- 1 downto 0);
-        xOut_53              : out std_logic_vector(17- 1 downto 0);
-        xOut_54              : out std_logic_vector(17- 1 downto 0);
-        xOut_55              : out std_logic_vector(17- 1 downto 0);
-        xOut_56              : out std_logic_vector(17- 1 downto 0);
-        xOut_57              : out std_logic_vector(17- 1 downto 0);
-        xOut_58              : out std_logic_vector(17- 1 downto 0);
-        xOut_59              : out std_logic_vector(17- 1 downto 0);
-        xOut_60              : out std_logic_vector(17- 1 downto 0);
-        xOut_61              : out std_logic_vector(17- 1 downto 0);
-        xOut_62              : out std_logic_vector(17- 1 downto 0);
-        xOut_63              : out std_logic_vector(17- 1 downto 0);
+        xOut_0              : out std_logic_vector(19- 1 downto 0);
+        xOut_1              : out std_logic_vector(19- 1 downto 0);
+        xOut_2              : out std_logic_vector(19- 1 downto 0);
+        xOut_3              : out std_logic_vector(19- 1 downto 0);
+        xOut_4              : out std_logic_vector(19- 1 downto 0);
+        xOut_5              : out std_logic_vector(19- 1 downto 0);
+        xOut_6              : out std_logic_vector(19- 1 downto 0);
+        xOut_7              : out std_logic_vector(19- 1 downto 0);
+        xOut_8              : out std_logic_vector(19- 1 downto 0);
+        xOut_9              : out std_logic_vector(19- 1 downto 0);
+        xOut_10              : out std_logic_vector(19- 1 downto 0);
+        xOut_11              : out std_logic_vector(19- 1 downto 0);
+        xOut_12              : out std_logic_vector(19- 1 downto 0);
+        xOut_13              : out std_logic_vector(19- 1 downto 0);
+        xOut_14              : out std_logic_vector(19- 1 downto 0);
+        xOut_15              : out std_logic_vector(19- 1 downto 0);
+        xOut_16              : out std_logic_vector(19- 1 downto 0);
+        xOut_17              : out std_logic_vector(19- 1 downto 0);
+        xOut_18              : out std_logic_vector(19- 1 downto 0);
+        xOut_19              : out std_logic_vector(19- 1 downto 0);
+        xOut_20              : out std_logic_vector(19- 1 downto 0);
+        xOut_21              : out std_logic_vector(19- 1 downto 0);
+        xOut_22              : out std_logic_vector(19- 1 downto 0);
+        xOut_23              : out std_logic_vector(19- 1 downto 0);
+        xOut_24              : out std_logic_vector(19- 1 downto 0);
+        xOut_25              : out std_logic_vector(19- 1 downto 0);
+        xOut_26              : out std_logic_vector(19- 1 downto 0);
+        xOut_27              : out std_logic_vector(19- 1 downto 0);
+        xOut_28              : out std_logic_vector(19- 1 downto 0);
+        xOut_29              : out std_logic_vector(19- 1 downto 0);
+        xOut_30              : out std_logic_vector(19- 1 downto 0);
+        xOut_31              : out std_logic_vector(19- 1 downto 0);
+        xOut_32              : out std_logic_vector(19- 1 downto 0);
+        xOut_33              : out std_logic_vector(19- 1 downto 0);
+        xOut_34              : out std_logic_vector(19- 1 downto 0);
+        xOut_35              : out std_logic_vector(19- 1 downto 0);
+        xOut_36              : out std_logic_vector(19- 1 downto 0);
+        xOut_37              : out std_logic_vector(19- 1 downto 0);
+        xOut_38              : out std_logic_vector(19- 1 downto 0);
+        xOut_39              : out std_logic_vector(19- 1 downto 0);
+        xOut_40              : out std_logic_vector(19- 1 downto 0);
+        xOut_41              : out std_logic_vector(19- 1 downto 0);
+        xOut_42              : out std_logic_vector(19- 1 downto 0);
+        xOut_43              : out std_logic_vector(19- 1 downto 0);
+        xOut_44              : out std_logic_vector(19- 1 downto 0);
+        xOut_45              : out std_logic_vector(19- 1 downto 0);
+        xOut_46              : out std_logic_vector(19- 1 downto 0);
+        xOut_47              : out std_logic_vector(19- 1 downto 0);
+        xOut_48              : out std_logic_vector(19- 1 downto 0);
+        xOut_49              : out std_logic_vector(19- 1 downto 0);
+        xOut_50              : out std_logic_vector(19- 1 downto 0);
+        xOut_51              : out std_logic_vector(19- 1 downto 0);
+        xOut_52              : out std_logic_vector(19- 1 downto 0);
+        xOut_53              : out std_logic_vector(19- 1 downto 0);
+        xOut_54              : out std_logic_vector(19- 1 downto 0);
+        xOut_55              : out std_logic_vector(19- 1 downto 0);
+        xOut_56              : out std_logic_vector(19- 1 downto 0);
+        xOut_57              : out std_logic_vector(19- 1 downto 0);
+        xOut_58              : out std_logic_vector(19- 1 downto 0);
+        xOut_59              : out std_logic_vector(19- 1 downto 0);
+        xOut_60              : out std_logic_vector(19- 1 downto 0);
+        xOut_61              : out std_logic_vector(19- 1 downto 0);
+        xOut_62              : out std_logic_vector(19- 1 downto 0);
+        xOut_63              : out std_logic_vector(19- 1 downto 0);
         clk                  : in std_logic;
         areset               : in std_logic
         );
@@ -315,70 +315,70 @@ end component fir_upsampling_0002_rtl_core;
             xIn_15     => data_in_core((0 + 8) * 15 + 8 - 1 downto (0 + 8) * 15),
             xOut_v    => core_out_valid_core,
             xOut_c    => core_out_channel_core,
-            xOut_0   => core_out_core(17* 0 + 17- 1 downto 17* 0),
-            xOut_1   => core_out_core(17* 1 + 17- 1 downto 17* 1),
-            xOut_2   => core_out_core(17* 2 + 17- 1 downto 17* 2),
-            xOut_3   => core_out_core(17* 3 + 17- 1 downto 17* 3),
-            xOut_4   => core_out_core(17* 4 + 17- 1 downto 17* 4),
-            xOut_5   => core_out_core(17* 5 + 17- 1 downto 17* 5),
-            xOut_6   => core_out_core(17* 6 + 17- 1 downto 17* 6),
-            xOut_7   => core_out_core(17* 7 + 17- 1 downto 17* 7),
-            xOut_8   => core_out_core(17* 8 + 17- 1 downto 17* 8),
-            xOut_9   => core_out_core(17* 9 + 17- 1 downto 17* 9),
-            xOut_10   => core_out_core(17* 10 + 17- 1 downto 17* 10),
-            xOut_11   => core_out_core(17* 11 + 17- 1 downto 17* 11),
-            xOut_12   => core_out_core(17* 12 + 17- 1 downto 17* 12),
-            xOut_13   => core_out_core(17* 13 + 17- 1 downto 17* 13),
-            xOut_14   => core_out_core(17* 14 + 17- 1 downto 17* 14),
-            xOut_15   => core_out_core(17* 15 + 17- 1 downto 17* 15),
-            xOut_16   => core_out_core(17* 16 + 17- 1 downto 17* 16),
-            xOut_17   => core_out_core(17* 17 + 17- 1 downto 17* 17),
-            xOut_18   => core_out_core(17* 18 + 17- 1 downto 17* 18),
-            xOut_19   => core_out_core(17* 19 + 17- 1 downto 17* 19),
-            xOut_20   => core_out_core(17* 20 + 17- 1 downto 17* 20),
-            xOut_21   => core_out_core(17* 21 + 17- 1 downto 17* 21),
-            xOut_22   => core_out_core(17* 22 + 17- 1 downto 17* 22),
-            xOut_23   => core_out_core(17* 23 + 17- 1 downto 17* 23),
-            xOut_24   => core_out_core(17* 24 + 17- 1 downto 17* 24),
-            xOut_25   => core_out_core(17* 25 + 17- 1 downto 17* 25),
-            xOut_26   => core_out_core(17* 26 + 17- 1 downto 17* 26),
-            xOut_27   => core_out_core(17* 27 + 17- 1 downto 17* 27),
-            xOut_28   => core_out_core(17* 28 + 17- 1 downto 17* 28),
-            xOut_29   => core_out_core(17* 29 + 17- 1 downto 17* 29),
-            xOut_30   => core_out_core(17* 30 + 17- 1 downto 17* 30),
-            xOut_31   => core_out_core(17* 31 + 17- 1 downto 17* 31),
-            xOut_32   => core_out_core(17* 32 + 17- 1 downto 17* 32),
-            xOut_33   => core_out_core(17* 33 + 17- 1 downto 17* 33),
-            xOut_34   => core_out_core(17* 34 + 17- 1 downto 17* 34),
-            xOut_35   => core_out_core(17* 35 + 17- 1 downto 17* 35),
-            xOut_36   => core_out_core(17* 36 + 17- 1 downto 17* 36),
-            xOut_37   => core_out_core(17* 37 + 17- 1 downto 17* 37),
-            xOut_38   => core_out_core(17* 38 + 17- 1 downto 17* 38),
-            xOut_39   => core_out_core(17* 39 + 17- 1 downto 17* 39),
-            xOut_40   => core_out_core(17* 40 + 17- 1 downto 17* 40),
-            xOut_41   => core_out_core(17* 41 + 17- 1 downto 17* 41),
-            xOut_42   => core_out_core(17* 42 + 17- 1 downto 17* 42),
-            xOut_43   => core_out_core(17* 43 + 17- 1 downto 17* 43),
-            xOut_44   => core_out_core(17* 44 + 17- 1 downto 17* 44),
-            xOut_45   => core_out_core(17* 45 + 17- 1 downto 17* 45),
-            xOut_46   => core_out_core(17* 46 + 17- 1 downto 17* 46),
-            xOut_47   => core_out_core(17* 47 + 17- 1 downto 17* 47),
-            xOut_48   => core_out_core(17* 48 + 17- 1 downto 17* 48),
-            xOut_49   => core_out_core(17* 49 + 17- 1 downto 17* 49),
-            xOut_50   => core_out_core(17* 50 + 17- 1 downto 17* 50),
-            xOut_51   => core_out_core(17* 51 + 17- 1 downto 17* 51),
-            xOut_52   => core_out_core(17* 52 + 17- 1 downto 17* 52),
-            xOut_53   => core_out_core(17* 53 + 17- 1 downto 17* 53),
-            xOut_54   => core_out_core(17* 54 + 17- 1 downto 17* 54),
-            xOut_55   => core_out_core(17* 55 + 17- 1 downto 17* 55),
-            xOut_56   => core_out_core(17* 56 + 17- 1 downto 17* 56),
-            xOut_57   => core_out_core(17* 57 + 17- 1 downto 17* 57),
-            xOut_58   => core_out_core(17* 58 + 17- 1 downto 17* 58),
-            xOut_59   => core_out_core(17* 59 + 17- 1 downto 17* 59),
-            xOut_60   => core_out_core(17* 60 + 17- 1 downto 17* 60),
-            xOut_61   => core_out_core(17* 61 + 17- 1 downto 17* 61),
-            xOut_62   => core_out_core(17* 62 + 17- 1 downto 17* 62),
-            xOut_63   => core_out_core(17* 63 + 17- 1 downto 17* 63),
+            xOut_0   => core_out_core(19* 0 + 19- 1 downto 19* 0),
+            xOut_1   => core_out_core(19* 1 + 19- 1 downto 19* 1),
+            xOut_2   => core_out_core(19* 2 + 19- 1 downto 19* 2),
+            xOut_3   => core_out_core(19* 3 + 19- 1 downto 19* 3),
+            xOut_4   => core_out_core(19* 4 + 19- 1 downto 19* 4),
+            xOut_5   => core_out_core(19* 5 + 19- 1 downto 19* 5),
+            xOut_6   => core_out_core(19* 6 + 19- 1 downto 19* 6),
+            xOut_7   => core_out_core(19* 7 + 19- 1 downto 19* 7),
+            xOut_8   => core_out_core(19* 8 + 19- 1 downto 19* 8),
+            xOut_9   => core_out_core(19* 9 + 19- 1 downto 19* 9),
+            xOut_10   => core_out_core(19* 10 + 19- 1 downto 19* 10),
+            xOut_11   => core_out_core(19* 11 + 19- 1 downto 19* 11),
+            xOut_12   => core_out_core(19* 12 + 19- 1 downto 19* 12),
+            xOut_13   => core_out_core(19* 13 + 19- 1 downto 19* 13),
+            xOut_14   => core_out_core(19* 14 + 19- 1 downto 19* 14),
+            xOut_15   => core_out_core(19* 15 + 19- 1 downto 19* 15),
+            xOut_16   => core_out_core(19* 16 + 19- 1 downto 19* 16),
+            xOut_17   => core_out_core(19* 17 + 19- 1 downto 19* 17),
+            xOut_18   => core_out_core(19* 18 + 19- 1 downto 19* 18),
+            xOut_19   => core_out_core(19* 19 + 19- 1 downto 19* 19),
+            xOut_20   => core_out_core(19* 20 + 19- 1 downto 19* 20),
+            xOut_21   => core_out_core(19* 21 + 19- 1 downto 19* 21),
+            xOut_22   => core_out_core(19* 22 + 19- 1 downto 19* 22),
+            xOut_23   => core_out_core(19* 23 + 19- 1 downto 19* 23),
+            xOut_24   => core_out_core(19* 24 + 19- 1 downto 19* 24),
+            xOut_25   => core_out_core(19* 25 + 19- 1 downto 19* 25),
+            xOut_26   => core_out_core(19* 26 + 19- 1 downto 19* 26),
+            xOut_27   => core_out_core(19* 27 + 19- 1 downto 19* 27),
+            xOut_28   => core_out_core(19* 28 + 19- 1 downto 19* 28),
+            xOut_29   => core_out_core(19* 29 + 19- 1 downto 19* 29),
+            xOut_30   => core_out_core(19* 30 + 19- 1 downto 19* 30),
+            xOut_31   => core_out_core(19* 31 + 19- 1 downto 19* 31),
+            xOut_32   => core_out_core(19* 32 + 19- 1 downto 19* 32),
+            xOut_33   => core_out_core(19* 33 + 19- 1 downto 19* 33),
+            xOut_34   => core_out_core(19* 34 + 19- 1 downto 19* 34),
+            xOut_35   => core_out_core(19* 35 + 19- 1 downto 19* 35),
+            xOut_36   => core_out_core(19* 36 + 19- 1 downto 19* 36),
+            xOut_37   => core_out_core(19* 37 + 19- 1 downto 19* 37),
+            xOut_38   => core_out_core(19* 38 + 19- 1 downto 19* 38),
+            xOut_39   => core_out_core(19* 39 + 19- 1 downto 19* 39),
+            xOut_40   => core_out_core(19* 40 + 19- 1 downto 19* 40),
+            xOut_41   => core_out_core(19* 41 + 19- 1 downto 19* 41),
+            xOut_42   => core_out_core(19* 42 + 19- 1 downto 19* 42),
+            xOut_43   => core_out_core(19* 43 + 19- 1 downto 19* 43),
+            xOut_44   => core_out_core(19* 44 + 19- 1 downto 19* 44),
+            xOut_45   => core_out_core(19* 45 + 19- 1 downto 19* 45),
+            xOut_46   => core_out_core(19* 46 + 19- 1 downto 19* 46),
+            xOut_47   => core_out_core(19* 47 + 19- 1 downto 19* 47),
+            xOut_48   => core_out_core(19* 48 + 19- 1 downto 19* 48),
+            xOut_49   => core_out_core(19* 49 + 19- 1 downto 19* 49),
+            xOut_50   => core_out_core(19* 50 + 19- 1 downto 19* 50),
+            xOut_51   => core_out_core(19* 51 + 19- 1 downto 19* 51),
+            xOut_52   => core_out_core(19* 52 + 19- 1 downto 19* 52),
+            xOut_53   => core_out_core(19* 53 + 19- 1 downto 19* 53),
+            xOut_54   => core_out_core(19* 54 + 19- 1 downto 19* 54),
+            xOut_55   => core_out_core(19* 55 + 19- 1 downto 19* 55),
+            xOut_56   => core_out_core(19* 56 + 19- 1 downto 19* 56),
+            xOut_57   => core_out_core(19* 57 + 19- 1 downto 19* 57),
+            xOut_58   => core_out_core(19* 58 + 19- 1 downto 19* 58),
+            xOut_59   => core_out_core(19* 59 + 19- 1 downto 19* 59),
+            xOut_60   => core_out_core(19* 60 + 19- 1 downto 19* 60),
+            xOut_61   => core_out_core(19* 61 + 19- 1 downto 19* 61),
+            xOut_62   => core_out_core(19* 62 + 19- 1 downto 19* 62),
+            xOut_63   => core_out_core(19* 63 + 19- 1 downto 19* 63),
             clk       => clk,
             areset    => reset_fir
         );
