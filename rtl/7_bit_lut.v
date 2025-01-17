@@ -1,5 +1,5 @@
 module power_lut_7(clk_i, a, z);
-	 input clk_i;
+    input clk_i;
     input [6:0] a;
     output reg [13:0] z;
 

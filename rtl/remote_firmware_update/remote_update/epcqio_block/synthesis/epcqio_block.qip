@@ -1,8 +1,8 @@
 set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name IP_TOOL_NAME "Qsys"
-set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name IP_TOOL_VERSION "18.1"
+set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name IP_TOOL_VERSION "20.1"
 set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name IP_TOOL_ENV "Qsys"
 set_global_assignment -library "epcqio_block" -name SOPCINFO_FILE [file join $::quartus(qip_path) "../../epcqio_block.sopcinfo"]
-set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name SLD_INFO "QSYS_NAME epcqio_block HAS_SOPCINFO 1 GENERATION_ID 1622134949"
+set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name SLD_INFO "QSYS_NAME epcqio_block HAS_SOPCINFO 1 GENERATION_ID 1734230450"
 set_global_assignment -library "epcqio_block" -name MISC_FILE [file join $::quartus(qip_path) "../epcqio_block.cmp"]
 set_global_assignment -library "epcqio_block" -name SLD_FILE [file join $::quartus(qip_path) "epcqio_block.debuginfo"]
 set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name IP_TARGETED_DEVICE_FAMILY "Cyclone V"
@@ -15,7 +15,7 @@ set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name IP_CO
 set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name IP_COMPONENT_REPORT_HIERARCHY "On"
 set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name IP_COMPONENT_INTERNAL "Off"
 set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name IP_COMPONENT_VERSION "MS4w"
-set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name IP_COMPONENT_PARAMETER "QVVUT19HRU5FUkFUSU9OX0lE::MTYyMjEzNDk0OQ==::QXV0byBHRU5FUkFUSU9OX0lE"
+set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name IP_COMPONENT_PARAMETER "QVVUT19HRU5FUkFUSU9OX0lE::MTczNDIzMDQ1MA==::QXV0byBHRU5FUkFUSU9OX0lE"
 set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name IP_COMPONENT_PARAMETER "QVVUT19ERVZJQ0VfRkFNSUxZ::Q3ljbG9uZSBW::QXV0byBERVZJQ0VfRkFNSUxZ"
 set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name IP_COMPONENT_PARAMETER "QVVUT19ERVZJQ0U=::NUNFQkE1RjIzQzc=::QXV0byBERVZJQ0U="
 set_global_assignment -entity "epcqio_block" -library "epcqio_block" -name IP_COMPONENT_PARAMETER "QVVUT19ERVZJQ0VfU1BFRURHUkFERQ==::Nw==::QXV0byBERVZJQ0VfU1BFRURHUkFERQ=="
@@ -27,7 +27,7 @@ set_global_assignment -entity "epcqio_block_asmi_parallel_0" -library "epcqio_bl
 set_global_assignment -entity "epcqio_block_asmi_parallel_0" -library "epcqio_block" -name IP_COMPONENT_REPORT_HIERARCHY "Off"
 set_global_assignment -entity "epcqio_block_asmi_parallel_0" -library "epcqio_block" -name IP_COMPONENT_INTERNAL "Off"
 set_global_assignment -entity "epcqio_block_asmi_parallel_0" -library "epcqio_block" -name IP_COMPONENT_AUTHOR "QWx0ZXJhIENvcnBvcmF0aW9u"
-set_global_assignment -entity "epcqio_block_asmi_parallel_0" -library "epcqio_block" -name IP_COMPONENT_VERSION "MTguMQ=="
+set_global_assignment -entity "epcqio_block_asmi_parallel_0" -library "epcqio_block" -name IP_COMPONENT_VERSION "MjAuMQ=="
 set_global_assignment -entity "epcqio_block_asmi_parallel_0" -library "epcqio_block" -name IP_COMPONENT_DESCRIPTION "VGhlIEFsdGVyYSBBU01JIFBhcmFsbGVsIG1lZ2FmdW5jdGlvbiBwcm92aWRlcyBhY2Nlc3MgdG8gZXJhc2FibGUgIHByb2dyYW1tYWJsZSBjb25maWd1cmFibGUgc2VyaWFsIChFUENTKSBhbmQgcXVhZC1zZXJpYWwgY29uZmlndXJhdGlvbiAgKEVQQ1EpIGRldmljZXMgdGhyb3VnaCBwYXJhbGxlbCBkYXRhIGlucHV0IGFuZCBvdXRwdXQgcG9ydHMu"
 set_global_assignment -entity "epcqio_block_asmi_parallel_0" -library "epcqio_block" -name IP_COMPONENT_PARAMETER "REVWSUNFX0ZBTUlMWQ==::Q3ljbG9uZSBW::REVWSUNFX0ZBTUlMWQ=="
 set_global_assignment -entity "epcqio_block_asmi_parallel_0" -library "epcqio_block" -name IP_COMPONENT_PARAMETER "SU5URU5ERURfREVWSUNFX0ZBTUlMWQ==::Q3ljbG9uZSBW::SU5URU5ERURfREVWSUNFX0ZBTUlMWQ=="
@@ -77,5 +77,5 @@ set_global_assignment -library "epcqio_block" -name VHDL_FILE [file join $::quar
 set_global_assignment -library "epcqio_block" -name VERILOG_FILE [file join $::quartus(qip_path) "submodules/epcqio_block_asmi_parallel_0.v"]
 
 set_global_assignment -entity "epcqio_block_asmi_parallel_0" -library "epcqio_block" -name IP_TOOL_NAME "altera_asmi_parallel"
-set_global_assignment -entity "epcqio_block_asmi_parallel_0" -library "epcqio_block" -name IP_TOOL_VERSION "18.1"
+set_global_assignment -entity "epcqio_block_asmi_parallel_0" -library "epcqio_block" -name IP_TOOL_VERSION "20.1"
 set_global_assignment -entity "epcqio_block_asmi_parallel_0" -library "epcqio_block" -name IP_TOOL_ENV "Qsys"

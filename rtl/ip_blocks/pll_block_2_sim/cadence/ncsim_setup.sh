@@ -12,7 +12,7 @@
 # or its authorized distributors. Please refer to the applicable 
 # agreement for further details.
 
-# ACDS 20.1 711 win32 2024.10.04.23:13:26
+# ACDS 20.1 711 win32 2024.12.17.22:00:20
 
 # ----------------------------------------
 # ncsim - auto-generated simulation script
@@ -106,7 +106,7 @@
 # within the Quartus project, and generate a unified
 # script which supports all the Altera IP within the design.
 # ----------------------------------------
-# ACDS 20.1 711 win32 2024.10.04.23:13:26
+# ACDS 20.1 711 win32 2024.12.17.22:00:20
 # ----------------------------------------
 # initialize variables
 TOP_LEVEL_NAME="pll_block_2"

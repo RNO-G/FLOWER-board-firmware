@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <deploy
- date="2021.05.28.11:52:31"
- outputDirectory="C:/Users/eric/Desktop/projects/greenland_lowthreshold_system/FLOWER-board-firmware/rtl/remote_firmware_update/serial_flash/">
+ date="2024.12.14.21:40:04"
+ outputDirectory="C:/Users/ryank/Documents/firmware/rnog/dev/FLOWER-board-firmware/rtl/remote_firmware_update/serial_flash/">
  <perimeter>
   <parameter
      name="AUTO_GENERATION_ID"
@@ -84,40 +84,39 @@
  </perimeter>
  <entity
    path=""
-   parameterizationKey="serial_flash:1.0:AUTO_DEVICE=5CEBA5F23C7,AUTO_DEVICE_FAMILY=Cyclone V,AUTO_DEVICE_SPEEDGRADE=7,AUTO_GENERATION_ID=1622220751,AUTO_UNIQUE_ID=(altera_serial_flash_loader:18.1:ENABLE_QUAD_SPI_SUPPORT=true,ENABLE_SHARED_ACCESS=ON,ENHANCED_MODE=true,INTENDED_DEVICE_FAMILY=Cyclone V,NCSO_WIDTH=1,gui_shared_access=true)"
+   parameterizationKey="serial_flash:1.0:AUTO_DEVICE=5CEBA5F23C7,AUTO_DEVICE_FAMILY=Cyclone V,AUTO_DEVICE_SPEEDGRADE=7,AUTO_GENERATION_ID=1734230403,AUTO_UNIQUE_ID=(altera_serial_flash_loader:20.1:ENABLE_QUAD_SPI_SUPPORT=true,ENABLE_SHARED_ACCESS=ON,ENHANCED_MODE=true,INTENDED_DEVICE_FAMILY=Cyclone V,NCSO_WIDTH=1,gui_shared_access=true)"
    instancePathKey="serial_flash"
    kind="serial_flash"
    version="1.0"
    name="serial_flash">
-  <parameter name="AUTO_GENERATION_ID" value="1622220751" />
+  <parameter name="AUTO_GENERATION_ID" value="1734230403" />
   <parameter name="AUTO_DEVICE" value="5CEBA5F23C7" />
   <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone V" />
   <parameter name="AUTO_UNIQUE_ID" value="" />
   <parameter name="AUTO_DEVICE_SPEEDGRADE" value="7" />
   <generatedFiles>
    <file
-       path="C:/Users/eric/Desktop/projects/greenland_lowthreshold_system/FLOWER-board-firmware/rtl/remote_firmware_update/serial_flash/synthesis/serial_flash.v"
+       path="C:/Users/ryank/Documents/firmware/rnog/dev/FLOWER-board-firmware/rtl/remote_firmware_update/serial_flash/synthesis/serial_flash.v"
        type="VERILOG" />
   </generatedFiles>
   <childGeneratedFiles>
    <file
-       path="C:/Users/eric/Desktop/projects/greenland_lowthreshold_system/FLOWER-board-firmware/rtl/remote_firmware_update/serial_flash/synthesis/submodules/altera_serial_flash_loader.v"
+       path="C:/Users/ryank/Documents/firmware/rnog/dev/FLOWER-board-firmware/rtl/remote_firmware_update/serial_flash/synthesis/submodules/altera_serial_flash_loader.v"
        type="VERILOG"
        attributes="" />
   </childGeneratedFiles>
   <sourceFiles>
    <file
-       path="C:/Users/eric/Desktop/projects/greenland_lowthreshold_system/FLOWER-board-firmware/rtl/remote_firmware_update/serial_flash.qsys" />
+       path="C:/Users/ryank/Documents/firmware/rnog/dev/FLOWER-board-firmware/rtl/remote_firmware_update/serial_flash.qsys" />
   </sourceFiles>
   <childSourceFiles>
    <file
-       path="C:/intelfpga/18.1/ip/altera/altera_serial_flash_loader/altera_serial_flash_loader_hw.tcl" />
+       path="C:/intelfpga/20.1/ip/altera/altera_serial_flash_loader/altera_serial_flash_loader_hw.tcl" />
   </childSourceFiles>
   <messages>
    <message level="Debug" culprit="serial_flash">queue size: 0 starting:serial_flash "serial_flash"</message>
    <message level="Progress" culprit="min"></message>
    <message level="Progress" culprit="max"></message>
-   <message level="Progress" culprit="current"></message>
    <message level="Progress" culprit="current"></message>
    <message level="Debug">Transform: CustomInstructionTransform</message>
    <message level="Debug">No custom instruction connections, skipping transform </message>
@@ -136,10 +135,10 @@
  </entity>
  <entity
    path="submodules/"
-   parameterizationKey="altera_serial_flash_loader:18.1:ENABLE_QUAD_SPI_SUPPORT=true,ENABLE_SHARED_ACCESS=ON,ENHANCED_MODE=true,INTENDED_DEVICE_FAMILY=Cyclone V,NCSO_WIDTH=1,gui_shared_access=true"
+   parameterizationKey="altera_serial_flash_loader:20.1:ENABLE_QUAD_SPI_SUPPORT=true,ENABLE_SHARED_ACCESS=ON,ENHANCED_MODE=true,INTENDED_DEVICE_FAMILY=Cyclone V,NCSO_WIDTH=1,gui_shared_access=true"
    instancePathKey="serial_flash:.:serial_flash_loader_0"
    kind="altera_serial_flash_loader"
-   version="18.1"
+   version="20.1"
    name="altera_serial_flash_loader">
   <parameter name="ENABLE_SHARED_ACCESS" value="ON" />
   <parameter name="ENABLE_QUAD_SPI_SUPPORT" value="true" />
@@ -149,14 +148,14 @@
   <parameter name="INTENDED_DEVICE_FAMILY" value="Cyclone V" />
   <generatedFiles>
    <file
-       path="C:/Users/eric/Desktop/projects/greenland_lowthreshold_system/FLOWER-board-firmware/rtl/remote_firmware_update/serial_flash/synthesis/submodules/altera_serial_flash_loader.v"
+       path="C:/Users/ryank/Documents/firmware/rnog/dev/FLOWER-board-firmware/rtl/remote_firmware_update/serial_flash/synthesis/submodules/altera_serial_flash_loader.v"
        type="VERILOG"
        attributes="" />
   </generatedFiles>
   <childGeneratedFiles/>
   <sourceFiles>
    <file
-       path="C:/intelfpga/18.1/ip/altera/altera_serial_flash_loader/altera_serial_flash_loader_hw.tcl" />
+       path="C:/intelfpga/20.1/ip/altera/altera_serial_flash_loader/altera_serial_flash_loader_hw.tcl" />
   </sourceFiles>
   <childSourceFiles/>
   <instantiator instantiator="serial_flash" as="serial_flash_loader_0" />

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <deploy
- date="2021.05.27.12:02:30"
- outputDirectory="C:/Users/eric/Desktop/projects/greenland_lowthreshold_system/FLOWER-board-firmware/rtl/remote_firmware_update/remote_update/epcqio_block/">
+ date="2024.12.14.21:40:52"
+ outputDirectory="C:/Users/ryank/Documents/firmware/rnog/dev/FLOWER-board-firmware/rtl/remote_firmware_update/remote_update/epcqio_block/">
  <perimeter>
   <parameter
      name="AUTO_GENERATION_ID"
@@ -173,14 +173,14 @@
  </perimeter>
  <entity
    path=""
-   parameterizationKey="epcqio_block:1.0:AUTO_CLKIN_CLOCK_DOMAIN=-1,AUTO_CLKIN_CLOCK_RATE=-1,AUTO_CLKIN_RESET_DOMAIN=-1,AUTO_DEVICE=5CEBA5F23C7,AUTO_DEVICE_FAMILY=Cyclone V,AUTO_DEVICE_SPEEDGRADE=7,AUTO_GENERATION_ID=1622134949,AUTO_UNIQUE_ID=(altera_asmi_parallel:18.1:CBX_AUTO_BLACKBOX=ALL,DATA_WIDTH=STANDARD,DEVICE_FAMILY=Cyclone V,ENABLE_SIM=false,EPCS_TYPE=EPCQ64,FLASH_RSTPIN=FALSE,INTENDED_DEVICE_FAMILY=Cyclone V,PAGE_SIZE=256,PORT_BULK_ERASE=PORT_USED,PORT_DIE_ERASE=PORT_UNUSED,PORT_EN4B_ADDR=PORT_UNUSED,PORT_EX4B_ADDR=PORT_UNUSED,PORT_FAST_READ=PORT_UNUSED,PORT_ILLEGAL_ERASE=PORT_USED,PORT_ILLEGAL_WRITE=PORT_USED,PORT_RDID_OUT=PORT_UNUSED,PORT_READ_ADDRESS=PORT_USED,PORT_READ_DUMMYCLK=PORT_UNUSED,PORT_READ_RDID=PORT_UNUSED,PORT_READ_SID=PORT_UNUSED,PORT_READ_STATUS=PORT_UNUSED,PORT_SECTOR_ERASE=PORT_USED,PORT_SECTOR_PROTECT=PORT_UNUSED,PORT_SHIFT_BYTES=PORT_USED,PORT_WREN=PORT_USED,PORT_WRITE=PORT_USED,USE_ASMIBLOCK=OFF,USE_EAB=ON,WRITE_DUMMY_CLK=0,gui_bulk_erase=true,gui_die_erase=false,gui_ex4b_addr=false,gui_fast_read=false,gui_page_write=true,gui_read_address=true,gui_read_dummyclk=false,gui_read_rdid=false,gui_read_sid=false,gui_read_status=false,gui_sector_erase=true,gui_sector_protect=false,gui_single_write=false,gui_use_asmiblock=true,gui_use_eab=false,gui_wren=true,gui_write=true)"
+   parameterizationKey="epcqio_block:1.0:AUTO_CLKIN_CLOCK_DOMAIN=-1,AUTO_CLKIN_CLOCK_RATE=-1,AUTO_CLKIN_RESET_DOMAIN=-1,AUTO_DEVICE=5CEBA5F23C7,AUTO_DEVICE_FAMILY=Cyclone V,AUTO_DEVICE_SPEEDGRADE=7,AUTO_GENERATION_ID=1734230450,AUTO_UNIQUE_ID=(altera_asmi_parallel:20.1:CBX_AUTO_BLACKBOX=ALL,DATA_WIDTH=STANDARD,DEVICE_FAMILY=Cyclone V,ENABLE_SIM=false,EPCS_TYPE=EPCQ64,FLASH_RSTPIN=FALSE,INTENDED_DEVICE_FAMILY=Cyclone V,PAGE_SIZE=256,PORT_BULK_ERASE=PORT_USED,PORT_DIE_ERASE=PORT_UNUSED,PORT_EN4B_ADDR=PORT_UNUSED,PORT_EX4B_ADDR=PORT_UNUSED,PORT_FAST_READ=PORT_UNUSED,PORT_ILLEGAL_ERASE=PORT_USED,PORT_ILLEGAL_WRITE=PORT_USED,PORT_RDID_OUT=PORT_UNUSED,PORT_READ_ADDRESS=PORT_USED,PORT_READ_DUMMYCLK=PORT_UNUSED,PORT_READ_RDID=PORT_UNUSED,PORT_READ_SID=PORT_UNUSED,PORT_READ_STATUS=PORT_UNUSED,PORT_SECTOR_ERASE=PORT_USED,PORT_SECTOR_PROTECT=PORT_UNUSED,PORT_SHIFT_BYTES=PORT_USED,PORT_WREN=PORT_USED,PORT_WRITE=PORT_USED,USE_ASMIBLOCK=OFF,USE_EAB=ON,WRITE_DUMMY_CLK=0,gui_bulk_erase=true,gui_die_erase=false,gui_ex4b_addr=false,gui_fast_read=false,gui_page_write=true,gui_read_address=true,gui_read_dummyclk=false,gui_read_rdid=false,gui_read_sid=false,gui_read_status=false,gui_sector_erase=true,gui_sector_protect=false,gui_single_write=false,gui_use_asmiblock=true,gui_use_eab=false,gui_wren=true,gui_write=true)"
    instancePathKey="epcqio_block"
    kind="epcqio_block"
    version="1.0"
    name="epcqio_block">
   <parameter name="AUTO_CLKIN_CLOCK_DOMAIN" value="-1" />
   <parameter name="AUTO_CLKIN_RESET_DOMAIN" value="-1" />
-  <parameter name="AUTO_GENERATION_ID" value="1622134949" />
+  <parameter name="AUTO_GENERATION_ID" value="1734230450" />
   <parameter name="AUTO_DEVICE" value="5CEBA5F23C7" />
   <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone V" />
   <parameter name="AUTO_CLKIN_CLOCK_RATE" value="-1" />
@@ -188,28 +188,27 @@
   <parameter name="AUTO_DEVICE_SPEEDGRADE" value="7" />
   <generatedFiles>
    <file
-       path="C:/Users/eric/Desktop/projects/greenland_lowthreshold_system/FLOWER-board-firmware/rtl/remote_firmware_update/remote_update/epcqio_block/synthesis/epcqio_block.vhd"
+       path="C:/Users/ryank/Documents/firmware/rnog/dev/FLOWER-board-firmware/rtl/remote_firmware_update/remote_update/epcqio_block/synthesis/epcqio_block.vhd"
        type="VHDL" />
   </generatedFiles>
   <childGeneratedFiles>
    <file
-       path="C:/Users/eric/Desktop/projects/greenland_lowthreshold_system/FLOWER-board-firmware/rtl/remote_firmware_update/remote_update/epcqio_block/synthesis/submodules/epcqio_block_asmi_parallel_0.v"
+       path="C:/Users/ryank/Documents/firmware/rnog/dev/FLOWER-board-firmware/rtl/remote_firmware_update/remote_update/epcqio_block/synthesis/submodules/epcqio_block_asmi_parallel_0.v"
        type="VERILOG"
        attributes="" />
   </childGeneratedFiles>
   <sourceFiles>
    <file
-       path="C:/Users/eric/Desktop/projects/greenland_lowthreshold_system/FLOWER-board-firmware/rtl/remote_firmware_update/remote_update/epcqio_block.qsys" />
+       path="C:/Users/ryank/Documents/firmware/rnog/dev/FLOWER-board-firmware/rtl/remote_firmware_update/remote_update/epcqio_block.qsys" />
   </sourceFiles>
   <childSourceFiles>
    <file
-       path="C:/intelfpga/18.1/ip/altera/altera_asmi_parallel/altera_asmi_parallel_hw.tcl" />
+       path="C:/intelfpga/20.1/ip/altera/altera_asmi_parallel/altera_asmi_parallel_hw.tcl" />
   </childSourceFiles>
   <messages>
    <message level="Debug" culprit="epcqio_block">queue size: 0 starting:epcqio_block "epcqio_block"</message>
    <message level="Progress" culprit="min"></message>
    <message level="Progress" culprit="max"></message>
-   <message level="Progress" culprit="current"></message>
    <message level="Progress" culprit="current"></message>
    <message level="Debug">Transform: CustomInstructionTransform</message>
    <message level="Debug">No custom instruction connections, skipping transform </message>
@@ -228,10 +227,10 @@
  </entity>
  <entity
    path="submodules/"
-   parameterizationKey="altera_asmi_parallel:18.1:CBX_AUTO_BLACKBOX=ALL,DATA_WIDTH=STANDARD,DEVICE_FAMILY=Cyclone V,ENABLE_SIM=false,EPCS_TYPE=EPCQ64,FLASH_RSTPIN=FALSE,INTENDED_DEVICE_FAMILY=Cyclone V,PAGE_SIZE=256,PORT_BULK_ERASE=PORT_USED,PORT_DIE_ERASE=PORT_UNUSED,PORT_EN4B_ADDR=PORT_UNUSED,PORT_EX4B_ADDR=PORT_UNUSED,PORT_FAST_READ=PORT_UNUSED,PORT_ILLEGAL_ERASE=PORT_USED,PORT_ILLEGAL_WRITE=PORT_USED,PORT_RDID_OUT=PORT_UNUSED,PORT_READ_ADDRESS=PORT_USED,PORT_READ_DUMMYCLK=PORT_UNUSED,PORT_READ_RDID=PORT_UNUSED,PORT_READ_SID=PORT_UNUSED,PORT_READ_STATUS=PORT_UNUSED,PORT_SECTOR_ERASE=PORT_USED,PORT_SECTOR_PROTECT=PORT_UNUSED,PORT_SHIFT_BYTES=PORT_USED,PORT_WREN=PORT_USED,PORT_WRITE=PORT_USED,USE_ASMIBLOCK=OFF,USE_EAB=ON,WRITE_DUMMY_CLK=0,gui_bulk_erase=true,gui_die_erase=false,gui_ex4b_addr=false,gui_fast_read=false,gui_page_write=true,gui_read_address=true,gui_read_dummyclk=false,gui_read_rdid=false,gui_read_sid=false,gui_read_status=false,gui_sector_erase=true,gui_sector_protect=false,gui_single_write=false,gui_use_asmiblock=true,gui_use_eab=false,gui_wren=true,gui_write=true"
+   parameterizationKey="altera_asmi_parallel:20.1:CBX_AUTO_BLACKBOX=ALL,DATA_WIDTH=STANDARD,DEVICE_FAMILY=Cyclone V,ENABLE_SIM=false,EPCS_TYPE=EPCQ64,FLASH_RSTPIN=FALSE,INTENDED_DEVICE_FAMILY=Cyclone V,PAGE_SIZE=256,PORT_BULK_ERASE=PORT_USED,PORT_DIE_ERASE=PORT_UNUSED,PORT_EN4B_ADDR=PORT_UNUSED,PORT_EX4B_ADDR=PORT_UNUSED,PORT_FAST_READ=PORT_UNUSED,PORT_ILLEGAL_ERASE=PORT_USED,PORT_ILLEGAL_WRITE=PORT_USED,PORT_RDID_OUT=PORT_UNUSED,PORT_READ_ADDRESS=PORT_USED,PORT_READ_DUMMYCLK=PORT_UNUSED,PORT_READ_RDID=PORT_UNUSED,PORT_READ_SID=PORT_UNUSED,PORT_READ_STATUS=PORT_UNUSED,PORT_SECTOR_ERASE=PORT_USED,PORT_SECTOR_PROTECT=PORT_UNUSED,PORT_SHIFT_BYTES=PORT_USED,PORT_WREN=PORT_USED,PORT_WRITE=PORT_USED,USE_ASMIBLOCK=OFF,USE_EAB=ON,WRITE_DUMMY_CLK=0,gui_bulk_erase=true,gui_die_erase=false,gui_ex4b_addr=false,gui_fast_read=false,gui_page_write=true,gui_read_address=true,gui_read_dummyclk=false,gui_read_rdid=false,gui_read_sid=false,gui_read_status=false,gui_sector_erase=true,gui_sector_protect=false,gui_single_write=false,gui_use_asmiblock=true,gui_use_eab=false,gui_wren=true,gui_write=true"
    instancePathKey="epcqio_block:.:asmi_parallel_0"
    kind="altera_asmi_parallel"
-   version="18.1"
+   version="20.1"
    name="epcqio_block_asmi_parallel_0">
   <parameter name="PORT_EN4B_ADDR" value="PORT_UNUSED" />
   <parameter name="USE_EAB" value="ON" />
@@ -281,14 +280,14 @@
   <parameter name="USE_ASMIBLOCK" value="OFF" />
   <generatedFiles>
    <file
-       path="C:/Users/eric/Desktop/projects/greenland_lowthreshold_system/FLOWER-board-firmware/rtl/remote_firmware_update/remote_update/epcqio_block/synthesis/submodules/epcqio_block_asmi_parallel_0.v"
+       path="C:/Users/ryank/Documents/firmware/rnog/dev/FLOWER-board-firmware/rtl/remote_firmware_update/remote_update/epcqio_block/synthesis/submodules/epcqio_block_asmi_parallel_0.v"
        type="VERILOG"
        attributes="" />
   </generatedFiles>
   <childGeneratedFiles/>
   <sourceFiles>
    <file
-       path="C:/intelfpga/18.1/ip/altera/altera_asmi_parallel/altera_asmi_parallel_hw.tcl" />
+       path="C:/intelfpga/20.1/ip/altera/altera_asmi_parallel/altera_asmi_parallel_hw.tcl" />
   </sourceFiles>
   <childSourceFiles/>
   <instantiator instantiator="epcqio_block" as="asmi_parallel_0" />

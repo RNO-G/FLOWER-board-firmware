@@ -51,6 +51,7 @@ signal internal_serdes_outclk	: std_logic;
 signal internal_fifo_wr_en : std_logic;
 signal internal_rx_dat_valid : std_logic_vector(2 downto 0);-- := (others=>'0');
 signal internal_rx_dat_valid_flag : std_logic := '0';
+signal internal_rx_dat_valid_flag_buffer : std_logic := '0';
 
 component rxserdes
 port (rx_in : in std_logic_vector(7 downto 0);
@@ -119,6 +120,7 @@ begin
 		internal_rx_dat_valid(internal_rx_dat_valid'length-1 downto 0) <= (others =>'0');
 	elsif rising_edge(internal_serdes_outclk) then
 		internal_rx_dat_valid <= internal_rx_dat_valid(internal_rx_dat_valid'length-2 downto 0) & internal_rx_dat_valid_flag;
+		internal_rx_dat_valid_flag<=internal_rx_dat_valid_flag_buffer;
 	end if;
 end process;
 ---------------------------------------------------------	
@@ -127,6 +129,6 @@ port map(
 		clkA				=> clk_reg_i,
 		clkB				=> internal_serdes_outclk,
 		SignalIn_clkA	=> registers_i(to_integer(unsigned(adc_dat_valid_reg_adr)))(8), --data valid from software
-		SignalOut_clkB	=> internal_rx_dat_valid_flag);	
+		SignalOut_clkB	=> internal_rx_dat_valid_flag_buffer);	
 ---------------------------------------------------------
 end rtl;

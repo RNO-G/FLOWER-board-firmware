@@ -128,7 +128,7 @@ signal internal_ram_read_adr : std_logic_vector(9 downto 0);
 
 constant offset : integer := 64; -- array offset for bit-shift operation
 constant sample_align_offset : integer := 16; --array offset for adc-to-adc sample alignment
---
+
 component signal_sync is
 port(
 		clkA			: in	std_logic;
@@ -138,6 +138,7 @@ port(
 end component;
 ----------------------------------------------------------
 begin
+
 pd0_o <= registers_i(to_integer(unsigned(adc_pd_reg_adr)))(0); 
 pd1_o <= registers_i(to_integer(unsigned(adc_pd_reg_adr)))(0); 
 rstn0_o <= '1'; --keep reset pins de-asserted // use internal registers

@@ -68,7 +68,7 @@ end component;
 begin
 
 --//write registers: 
-proc_write_register : process(rst_i, clk_i, write_rdy_i, write_reg_i, registers_io, rst_powerup_i)
+proc_write_register : process(rst_i, clk_i, write_rdy_i, write_reg_i, registers_io, rst_powerup_i, firmware_ver_i, firmware_date_i)
 begin
 
 	if rst_i = '1' then

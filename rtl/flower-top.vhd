@@ -83,10 +83,10 @@ architecture rtl of flower_top is
 	---------------------------------------
 	--//FIRMWARE DETAILS--
 	constant fw_version_maj	: std_logic_vector(7 downto 0)  := x"00";
-	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"0d";
-	constant fw_year			: std_logic_vector(11 downto 0) := x"7E8";
-	constant fw_month			: std_logic_vector(3 downto 0)  := x"a";
-	constant fw_day			: std_logic_vector(7 downto 0)  := x"04";
+	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"0e";
+	constant fw_year			: std_logic_vector(11 downto 0) := x"7E9";
+	constant fw_month			: std_logic_vector(3 downto 0)  := x"1";
+	constant fw_day			: std_logic_vector(7 downto 0)  := x"10";
 	---------------------------------------
 	--//the following signals to/from Clock_Manager--
 	signal clock_internal_10MHz_sys		:	std_logic;	
@@ -405,6 +405,7 @@ begin
 	systrig_o   <= ((phased_trig_internal or coinc_trig_internal) and registers(92)(0)) or (internal_delayed_pps and registers(92)(8)); 
 	sma_aux0_io <= ((phased_trig_internal or coinc_trig_internal) and registers(93)(0)) or (internal_delayed_pps and registers(93)(8)); 
 	--
+	
 	xCOINC_TRIG : entity work.simple_trigger
 	port map(
 		rst_i			=> reset_power_on,
@@ -418,8 +419,8 @@ begin
 		trig_bits_o => coinc_trig_scaler_bits,
 		coinc_trig_metadata_o => coinc_trig_bits_metadata,
 		coinc_trig_o=> coinc_trig_internal);
-		
-	xPHASED_TRIG : entity work.phased_trigger
+	
+	xPHASED_TRIG : entity work.phased_trigger--envelope_trigger
 	port map(
 		rst_i			=> reset_power_on,
 		clk_i			=> clock_internal_10MHz_loc,
@@ -431,8 +432,10 @@ begin
 		ch3_data_i	=> ch3_data,
 		trig_bits_o => phased_trig_scaler_bits,
 		phased_trig_o=> phased_trig_internal,
-		phased_trig_metadata_o => phased_trig_bits_metadata,
-		power_o=>power_metadata);
+		phased_trig_metadata_o => phased_trig_bits_metadata
+		,power_o=>power_metadata
+		);
+	
 	
 	-----------------------------------------
 	xGLOBAL_TIMING : entity work.pps_timing

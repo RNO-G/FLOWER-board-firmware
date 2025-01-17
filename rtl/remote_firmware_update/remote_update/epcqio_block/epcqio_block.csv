@@ -1,0 +1,18 @@
+# system info epcqio_block on 2024.12.14.21:40:47
+system_info:
+name,value
+DEVICE,5CEBA5F23C7
+DEVICE_FAMILY,Cyclone V
+GENERATION_ID,1734230445
+#
+#
+# Files generated for epcqio_block on 2024.12.14.21:40:47
+files:
+filepath,kind,attributes,module,is_top
+simulation/epcqio_block.vhd,VHDL,,epcqio_block,true
+simulation/submodules/epcqio_block_asmi_parallel_0.v,VERILOG,,epcqio_block_asmi_parallel_0,false
+#
+# Map from instance-path to kind of module
+instances:
+instancePath,module
+epcqio_block.asmi_parallel_0,epcqio_block_asmi_parallel_0

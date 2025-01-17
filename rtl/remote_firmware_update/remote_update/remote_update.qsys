@@ -106,7 +106,7 @@
  <module
    name="remote_update_0"
    kind="altera_remote_update"
-   version="18.1"
+   version="20.1"
    enabled="1"
    autoexport="1">
   <parameter name="AUTO_DEVICE_SPEEDGRADE" value="7" />

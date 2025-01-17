@@ -90,7 +90,7 @@ end component;
 begin
 ------------------------------------
 --process/generate some triggers 
-process(clk_data_i)
+process(clk_data_i, rst_i)
 begin
 	if rst_i = '1' then
 		internal_sw_trig_reg <= (others=>'0');
@@ -146,7 +146,7 @@ begin
 end process;
 ------------------------------------
 --timestamping / counters:
-proc_meta_counters : process(clk_data_i, internal_trig_to_save_data, internal_write_busy)
+proc_meta_counters : process(clk_data_i, rst_i, registers_i, internal_trig_to_save_data, internal_write_busy)
 begin
 	if rst_i = '1' then
 		internal_event_timestamp_counter <= (others=>'0');

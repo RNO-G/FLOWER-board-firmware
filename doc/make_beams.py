@@ -7,18 +7,25 @@ make_plots=False
 c=3e8
 n=1.75
 sampling_rate=118e6*4
-int_factor=4
+int_factor=1
 int_rate=sampling_rate*int_factor
 num_antennas=4
+num_beams=12
+delay_offset=4*int_factor-1 #4*factor-1 for safe padding
 
-cable_delays=np.array([716.2603798064285,711.7615958304959,706.495904921158,702.195731800799])
-ant_depths=np.array([-96.215,-95.174,-94.183,-93.155])
+#cable_delays=np.array([716.2603798064285,711.7615958304959,706.495904921158,702.195731800799])
+#ant_depths=np.array([-96.215,-95.174,-94.183,-93.155])
+#station 11
+
+cable_delays=np.array([717.0535,712.40048,707.1525,702.8618])
+ant_depths=np.array([-94.717,-93.751,-92.735,-91.745])
 
 def get_delay(ant_top=0,ant_num=0,angle=0):
     return (ant_depths[ant_top]-ant_depths[ant_num])*np.cos((90-angle)*np.pi/180)*n/c+(cable_delays[ant_num]-cable_delays[ant_top])/1e9
 
-
-
+sin_vals=np.linspace(np.sin(-60*np.pi/180),np.sin(60*np.pi/180),12)
+#print(sin_vals)
+beam_angs=np.arcsin(sin_vals)*180/np.pi
 angs=np.linspace(-80,80,160)
 delays=np.zeros((4,len(angs)))
 lookback=np.zeros((4,len(angs)))
@@ -70,14 +77,16 @@ if make_plots:
     plt.close()
 
 
-num_beams=9
+
 beam_locs=np.linspace(-60,60,num_beams)
+beam_locs=beam_angs
 print('beam locs',beam_locs)
+
 beam_lookback=np.zeros((4,num_beams))
-beam_lookback[0]=np.round(np.interp(beam_locs,angs,lookback[0]*int_rate))+15
-beam_lookback[1]=np.round(np.interp(beam_locs,angs,lookback[1]*int_rate))+15
-beam_lookback[2]=np.round(np.interp(beam_locs,angs,lookback[2]*int_rate))+15
-beam_lookback[3]=np.round(np.interp(beam_locs,angs,lookback[3]*int_rate))+15
+beam_lookback[0]=np.round(np.interp(beam_locs,angs,lookback[0]*int_rate))+delay_offset
+beam_lookback[1]=np.round(np.interp(beam_locs,angs,lookback[1]*int_rate))+delay_offset
+beam_lookback[2]=np.round(np.interp(beam_locs,angs,lookback[2]*int_rate))+delay_offset
+beam_lookback[3]=np.round(np.interp(beam_locs,angs,lookback[3]*int_rate))+delay_offset
 
 if make_plots:
     plt.figure()
@@ -107,7 +116,7 @@ print('\n\n')
 print('print out for python')
 print('[',end='')
 for i in range(num_beams):
-    print('[%i,%i,%i,%i]'%(beam_lookback[0][8-i],beam_lookback[1][8-i],beam_lookback[2][8-i],beam_lookback[3][8-i]),end='')
+    print('[%i,%i,%i,%i]'%(beam_lookback[0][num_beams-1-i],beam_lookback[1][num_beams-1-i],beam_lookback[2][num_beams-1-i],beam_lookback[3][num_beams-1-i]),end='')
     if i==num_beams-1:
         break
     print(',',end='')

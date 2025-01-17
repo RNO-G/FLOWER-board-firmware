@@ -62,9 +62,7 @@ constant input_thesh_bits:	integer := 12;
 constant num_channels:integer:=4;
 constant input_thresh_bits:integer:=8;
 constant delay_offset:integer:=4*interp_factor-1;
-
-type filt_coeffs is array (14 downto 0) of integer range -127 to 127;
-constant hilbert_coeffs: filt_coeffs:=(-12,0,-16,0,-27,0,-81,0,81,0,27,0,16,0,12);
+constant real_im_sync_delay:integer:=3*step_size+3;--15;
 
 
 type antenna_delays is array (num_beams-1 downto 0,num_channels-1 downto 0) of integer range 0 to 127;
@@ -75,30 +73,56 @@ type antenna_delays is array (num_beams-1 downto 0,num_channels-1 downto 0) of i
 --constant beam_delays:antenna_delays:=((7,8,8,8),(8,8,7,7),(10,10,8,7),(13,11,9,7),(16,13,10,7),(19,15,11,7),(22,17,12,7),(25,19,13,7),(28,21,14,7),(31,23,15,7),(33,25,15,7),(35,26,16,7));
 
 --12 beams 1x
-constant beam_delays:antenna_delays:=((3,3,3,3),(4,4,3,3),(5,4,4,3),(6,5,4,3),(7,6,4,3),(9,7,5,3),(10,8,5,3),(12,9,6,3),(13,10,6,3),(15,11,7,3),(16,12,7,3),(17,12,7,3));
+constant beam_delays:antenna_delays:=((3,3,3,3),(4,4,3,3),(5,5,4,3),(6,6,4,3),
+													(8,6,5,3),(9,7,5,3),(10,8,5,3),(12,9,6,3),
+													(13,10,6,3),(14,11,7,3),(15,12,7,3),(17,12,7,3));
+
 --short streaming buffer
 type streaming_data_array is array(3 downto 0, streaming_buffer_length-1 downto 0) of signed(7 downto 0);
 signal streaming_data : streaming_data_array := (others=>(others=>(others=>'0'))); --pipeline data
+
+constant upsample_filter_length: integer:=23 ;
+type upsample_coeffs_t is array (upsample_filter_length-1 downto 0) of integer range -127 to 127;
+constant upsample_coeffs: upsample_coeffs_t:=(-1,0,2,-0,-3,0,6,-0,-12,0,40,64,40,0,-12,-0,6,0,-3,-0,2,0,-1);
+
 
 --temp buffers to assign input to and output from the upsampling filter
 signal upsampling_input_data: std_logic_vector(num_channels*step_size*sample_bit_length-1 downto 0):=(others=>'0');
 signal upsampling_output_data: std_logic_vector(num_channels*interp_factor*step_size*sample_bit_length-1 downto 0):=(others=>'0');
 
 --temp buffers to assign input to and output from the hilbert transformer
-signal transformer_input_data: std_logic_vector(num_channels*step_size*interp_factor*sample_bit_length-1 downto 0):=(others=>'0');
-signal transformer_output_data: std_logic_vector(num_channels*step_size*interp_factor*sample_bit_length-1 downto 0):=(others=>'0');
+constant hilbert_filter_length: integer:= 15;
+type filt_coeffs is array (hilbert_filter_length-1 downto 0) of integer range -127 to 127;
+constant hilbert_coeffs: filt_coeffs:=(12,0,16,0,27,0,81,0,-81,0,-27,0,-16,0,-12);
+
+type temp_hilbert is array (3 downto 0, step_size*interp_factor-1 downto 0, 14 downto 0) of signed(15 downto 0);
+signal temp_hilbert_vals: temp_hilbert;
+
+type padded_t is array(3 downto 0, step_size*interp_factor+upsample_filter_length-1 downto 0) of signed(sample_bit_length-1 downto 0);
+signal padded_sig: padded_t:=(others=>(others=>x"00"));
 
 --buffers to store the interpolated samples for being pulled when doing the beamforming
 type interpolated_data_array is array(3 downto 0, interp_data_length-1 downto 0) of signed(sample_bit_length-1 downto 0);
 signal real_analytic: interpolated_data_array:=(others=>(others=>x"00"));
 signal imaginary_analytic: interpolated_data_array:=(others=>(others=>x"00"));
 
-type hilbert_temp is array(3 downto 0, 3 downto 0) of signed(15 downto 0);
-signal int_hilbert: hilbert_temp:=(others=>(others=>x"0000"));
-signal int_hilbert0: hilbert_temp:=(others=>(others=>x"0000"));
-signal int_hilbert1: hilbert_temp:=(others=>(others=>x"0000"));
-signal int_hilbert2: hilbert_temp:=(others=>(others=>x"0000"));
-signal int_hilbert3: hilbert_temp:=(others=>(others=>x"0000"));
+type fir_temp is array(3 downto 0, step_size*interp_factor-1 downto 0) of signed(15 downto 0);
+signal int_hilbert: fir_temp:=(others=>(others=>x"0000"));
+signal int_hilbert0: fir_temp:=(others=>(others=>x"0000"));
+signal int_hilbert1: fir_temp:=(others=>(others=>x"0000"));
+signal int_hilbert2: fir_temp:=(others=>(others=>x"0000"));
+signal int_hilbert3: fir_temp:=(others=>(others=>x"0000"));
+
+
+signal int_up: fir_temp:=(others=>(others=>x"0000"));
+signal int_up0: fir_temp:=(others=>(others=>x"0000"));
+signal int_up1: fir_temp:=(others=>(others=>x"0000"));
+signal int_up2: fir_temp:=(others=>(others=>x"0000"));
+signal int_up3: fir_temp:=(others=>(others=>x"0000"));
+signal int_up4: fir_temp:=(others=>(others=>x"0000"));
+signal int_up5: fir_temp:=(others=>(others=>x"0000"));
+signal int_up6: fir_temp:=(others=>(others=>x"0000"));
+signal int_up7: fir_temp:=(others=>(others=>x"0000"));
 
 --temp wire to calculate coherent sum waveforms and check for saturation
 type phased_arr_buff is array (num_beams-1 downto 0,step_size*interp_factor-1 downto 0) of unsigned(9 downto 0);-- range 0 to 2**phased_sum_bits-1; --phased sum... log2(16*8)=7bits
@@ -197,18 +221,17 @@ port(
    out_clkB		: out	std_logic);
 end component;
 
---envelope lookup table. (a^2_b^2)^(1/2)
---component envelope is --7 bit lut for calculating power
---port(
---		clk_i    : in std_logic;
---		a			: in	unsigned(5 downto 0);
---		b			: in	unsigned(5 downto 0);
---		z			: out	unsigned(6 downto 0));
---end component;
-
---instantiate fir upsampling block
+--module to do multiplication on logic cells only
+component fabric_mult is 
+port(
+	dataa:in signed(7 downto 0);
+	datab:in signed(7 downto 0);
+	result:out signed(15 downto 0)
+	);
+end component;
 
 /*
+--2x upsampling fir filter
 component upsampling_2x is
 port(
 		clk: std_logic;
@@ -223,19 +246,7 @@ port(
 end component;
 */
 
---instantiate hilbert transformer block
---component hilbert_transformer is
---port(
---		clk: std_logic;
---		reset_n: in std_logic;
---		ast_sink_data: in std_logic_vector(transformer_input_data'length-1 downto 0);
---		ast_sink_valid:in std_logic;
---		ast_sink_error:in std_logic_vector(1 downto 0);
---		ast_source_data: out std_logic_vector(transformer_output_data'length-1 downto 0);
---		ast_source_valid: out std_logic;
---		ast_source_error: out std_logic_vector(1 downto 0)
---		);
---end component;
+
 
 -------------------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------------------------------------------
@@ -281,8 +292,6 @@ port map(
 		ast_source_error=>open
 		);
 */
-
-		
 --assign inputs and outputs to the FIR filter module by reassigning vector to signed ints
 proc_process_fir_upsampling: process(streaming_data,upsampling_output_data,real_analytic, clk_data_i,rst_i,internal_phased_trig_en)
 begin
@@ -290,9 +299,9 @@ begin
 	--if (internal_phased_trig_en='1') then 		
 		for ch in 0 to 3 loop
 		
-			for sample in 0 to step_size-1 loop
-				--upsampling_input_data(ch*(step_size*8)+sample*8+8-1 downto ch*(step_size*8)+sample*8)<=std_logic_vector(streaming_data(ch,sample));
-			end loop;
+			--for sample in 0 to step_size-1 loop
+			--	upsampling_input_data(ch*(step_size*8)+sample*8+8-1 downto ch*(step_size*8)+sample*8)<=std_logic_vector(streaming_data(ch,sample));
+			--end loop;
 			
 			for up_sample in 0 to interp_factor*step_size-1 loop
 				--real_analytic(ch,up_sample)<=signed(upsampling_output_data(ch*(interp_factor*step_size*sample_bit_length)+up_sample*sample_bit_length+sample_bit_length-1 downto ch*(interp_factor*step_size*sample_bit_length)+up_sample*sample_bit_length));
@@ -308,34 +317,98 @@ begin
 end process;
 
 
---generate FIR hilbert filter
---xTransformer:hilbert_transformer
---port map(
---		clk=>clk_data_i,
---		reset_n=>(not rst_i),
---		ast_sink_data=>transformer_input_data,
---		ast_sink_valid=>internal_phased_trig_en,
---		ast_sink_error=>b"00",
---		ast_source_data=>transformer_output_data,
---		ast_source_valid=>open,
---		ast_source_error=>open
---		);
+/*
+proc_upsample_by_hand:process(clk_data_i,rst_i,streaming_data, internal_phased_trig_en)
+begin
 
+	if rising_edge(clk_data_i) and (internal_phased_trig_en='1')then
+		for  ch in 0 to 3 loop
+			for sam in 0 to step_size*interp_factor-1 loop
+			
+				
+				if (sam mod interp_factor) = 0 then
+					padded_sig(ch,sam)<=streaming_data(ch,sam / interp_factor);
+				else
+					padded_sig(ch,sam)<=x"00";
+				end if;
 
+				int_up0(ch,sam)<=upsample_coeffs(0)*padded_sig(ch,0+sam)+upsample_coeffs(2)*padded_sig(ch,2+sam);
+				int_up1(ch,sam)<=upsample_coeffs(4)*padded_sig(ch,4+sam)+upsample_coeffs(6)*padded_sig(ch,6+sam);
+				int_up2(ch,sam)<=upsample_coeffs(8)*padded_sig(ch,8+sam)+upsample_coeffs(10)*padded_sig(ch,10+sam);
+				int_up3(ch,sam)<=upsample_coeffs(11)*padded_sig(ch,11+sam)+upsample_coeffs(10)*padded_sig(ch,12+sam);
+				int_up4(ch,sam)<=upsample_coeffs(8)*padded_sig(ch,14+sam)+upsample_coeffs(6)*padded_sig(ch,16+sam);
+				int_up5(ch,sam)<=upsample_coeffs(4)*padded_sig(ch,18+sam)+upsample_coeffs(2)*padded_sig(ch,20+sam);
+				int_up6(ch,sam)<=upsample_coeffs(0)*padded_sig(ch,22+sam);
+				
+				
+				int_up(ch,sam)<=int_up0(ch,sam)+int_up1(ch,sam)+int_up2(ch,sam)+int_up3(ch,sam)+int_up4(ch,sam)+int_up5(ch,sam)+int_up6(ch,sam);
+
+				--rounding
+				if (int_up(ch,sam)(15)='0') and (unsigned(int_up(ch,sam)(5 downto 0))>=x"20") then
+					real_analytic(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8)+1;
+					
+				elsif (int_up(ch,sam)(15)='0') and (unsigned(int_up(ch,sam)(5 downto 0))<x"20") then
+					real_analytic(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8);
+					
+				elsif (int_up(ch,sam)(15)='1') and (unsigned(int_up(ch,sam)(5 downto 0))<=x"20") then
+					real_analytic(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8);
+					
+				else --(int_hilbert(ch,sam)(15)='1') and (int_hilbert(ch,sam)(6 downto 0)>x"40") then
+					real_analytic(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8)-1;
+				end if;
+				
+			end loop;
+			
+			for j in step_size*interp_factor to interp_data_length-1 loop
+				real_analytic(ch,j)<=real_analytic(ch,j-step_size*interp_factor);
+			end loop;
+			
+			for j in step_size*interp_factor to step_size*interp_factor+upsample_filter_length-1 loop
+				padded_sig(ch,j)<=padded_sig(ch,j-8);
+			end loop;
+			
+		end loop;
+
+	end if;
+end process;
+*/
+/*
+--temp multiplier results for hilbert transformer
+mult_ch:for ch in 0 to 3 generate
+	mult_samples: for sample in 0 to step_size*interp_factor-1 generate
+		mult_filter: for fil in 0 to hilbert_filter_length-1 generate
+		
+			xhilbertmult: fabric_mult port map(
+				dataa=>real_analytic(ch,fil+sample),
+				datab=>to_signed(hilbert_coeffs(fil),8),
+				result=>temp_hilbert_vals(ch,sample,fil)
+				);
+		end generate;
+	end generate;
+end generate;
+*/
 --bc simulating the fir ip's is being a pain, I can't easily line up the real and imag parts...
+--convolution in stages for timing
 --let's just do it by hand since it's small. includes rounding	
 proc_hilbert_by_hand:process(clk_data_i,rst_i,streaming_data, internal_phased_trig_en)
 begin
 
 	if rising_edge(clk_data_i) and (internal_phased_trig_en='1')then
 		for  ch in 0 to 3 loop
-			for sam in 0 to 3 loop
+			for sam in 0 to step_size*interp_factor-1 loop
 			
-				--split into stages to meet timing prob
-				int_hilbert0(ch,sam)<=hilbert_coeffs(0)*streaming_data(ch,0+sam)+hilbert_coeffs(2)*streaming_data(ch,2+sam);
-				int_hilbert1(ch,sam)<=hilbert_coeffs(4)*streaming_data(ch,4+sam)+hilbert_coeffs(6)*streaming_data(ch,6+sam);
-				int_hilbert2(ch,sam)<=hilbert_coeffs(8)*streaming_data(ch,8+sam)+hilbert_coeffs(10)*streaming_data(ch,10+sam);
-				int_hilbert3(ch,sam)<=hilbert_coeffs(12)*streaming_data(ch,12+sam)+hilbert_coeffs(14)*streaming_data(ch,14+sam);
+				--these bits for mult on logic cells
+				--int_hilbert0(ch,sam)<=temp_hilbert_vals(ch,sam,0)+temp_hilbert_vals(ch,sam,2);
+				--int_hilbert1(ch,sam)<=temp_hilbert_vals(ch,sam,4)+temp_hilbert_vals(ch,sam,6);
+				--int_hilbert2(ch,sam)<=temp_hilbert_vals(ch,sam,8)+temp_hilbert_vals(ch,sam,10);
+				--int_hilbert3(ch,sam)<=temp_hilbert_vals(ch,sam,12)+temp_hilbert_vals(ch,sam,14);
+				
+				--this guy goes on multipliers by default
+				int_hilbert0(ch,sam)<=hilbert_coeffs(0)*real_analytic(ch,0+sam)+hilbert_coeffs(2)*real_analytic(ch,2+sam);
+				int_hilbert1(ch,sam)<=hilbert_coeffs(4)*real_analytic(ch,4+sam)+hilbert_coeffs(6)*real_analytic(ch,6+sam);
+				int_hilbert2(ch,sam)<=hilbert_coeffs(8)*real_analytic(ch,8+sam)+hilbert_coeffs(10)*real_analytic(ch,10+sam);
+				int_hilbert3(ch,sam)<=hilbert_coeffs(12)*real_analytic(ch,12+sam)+hilbert_coeffs(14)*real_analytic(ch,14+sam);
+				
 				int_hilbert(ch,sam)<=int_hilbert0(ch,sam)+int_hilbert1(ch,sam)+int_hilbert2(ch,sam)+int_hilbert3(ch,sam);
 
 				--rounding
@@ -364,33 +437,6 @@ begin
 end process;
 
 
---THIS HAS A WEIRD POSITIVE OFFSET OF A FEW, NEED TO CHECK
---assign inputs and outputs to the hilbert transformer
-proc_process_hilbert_transformer: process(real_analytic, transformer_output_data, imaginary_analytic, clk_data_i,rst_i,internal_phased_trig_en)
-begin
-	if rising_edge(clk_data_i) and (internal_phased_trig_en='1')then --not sure if these go into regs in the fir filter, doesn't hurt too much in case 	
-		for ch in 0 to 3 loop
-			/*
-			for sample in 0 to interp_factor*step_size-1 loop
-				--transformer_input_data(ch*(step_size*8)+sample*8+8-1 downto ch*(step_size*8)+sample*8)<=std_logic_vector(real_analytic(ch,sample));
-				transformer_input_data(ch*(step_size*8)+sample*8+8-1 downto ch*(step_size*8)+sample*8)<=std_logic_vector(streaming_data(ch,sample));
-			end loop;
-			
-			for out_sample in 0 to interp_factor*step_size-1 loop
-				imaginary_analytic(ch,out_sample)<=signed(transformer_output_data(ch*(interp_factor*step_size*sample_bit_length)+out_sample*sample_bit_length+sample_bit_length-1 
-					downto ch*(interp_factor*step_size*sample_bit_length)+out_sample*sample_bit_length));
-				
-				--imaginary_analytic(ch,out_sample)<=real_analytic(ch,out_sample);
-			end loop;
-	
-			for j in step_size*interp_factor to interp_data_length-1 loop
-				imaginary_analytic(ch,j)<=imaginary_analytic(ch,j-step_size*interp_factor);
-			end loop;
-			*/
-		end loop;
-	end if;
-end process;	
-
 --THIS WORKS... could saturate to 8 bits instead
 --do phasing to calculate the coherently summed waveforms of real and imag components of analytic signal
 proc_phasing: process(clk_data_i,internal_phased_trig_en, real_analytic, imaginary_analytic)
@@ -400,10 +446,10 @@ begin
 		for j in 0 to step_size*interp_factor-1 loop
 		
 			--assign the temporary as async, but then place it into a reg... cleaner(?) looking code
-			phased_real_wire(i,j)<=unsigned(abs(resize(real_analytic(0,15+beam_delays(i,0)+(j-delay_offset)),10)
-				+resize(real_analytic(1,15+beam_delays(i,1)+(j-delay_offset)),10)
-				+resize(real_analytic(2,15+beam_delays(i,2)+(j-delay_offset)),10)
-				+resize(real_analytic(3,15+beam_delays(i,3)+(j-delay_offset)),10))); --8? to sync real and imag from filter
+			phased_real_wire(i,j)<=unsigned(abs(resize(real_analytic(0,real_im_sync_delay+beam_delays(i,0)+(j-delay_offset)),10)
+				+resize(real_analytic(1,real_im_sync_delay+beam_delays(i,1)+(j-delay_offset)),10)
+				+resize(real_analytic(2,real_im_sync_delay+beam_delays(i,2)+(j-delay_offset)),10)
+				+resize(real_analytic(3,real_im_sync_delay+beam_delays(i,3)+(j-delay_offset)),10))); --8? to sync real and imag from filter
 				
 			phased_imaginary_wire(i,j)<=unsigned(abs(resize(imaginary_analytic(0,beam_delays(i,0)+(j-delay_offset)),10)
 				+resize(imaginary_analytic(1,beam_delays(i,1)+(j-delay_offset)),10)

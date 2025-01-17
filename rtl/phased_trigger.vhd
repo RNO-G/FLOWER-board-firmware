@@ -56,9 +56,9 @@ constant interp_factor: integer := 4;
 constant interp_data_length: integer := interp_factor*(24)+1;--interp_factor*(streaming_buffer_length-1)+1;
 constant sample_bit_length: integer:=8;
 constant baseline: unsigned(7 downto 0) := x"80";
-constant phased_sum_bits: integer := 7; --8. trying 7 bit lut
+constant phased_sum_bits: integer := 8; --8. trying 7 bit lut
 constant phased_sum_length: integer := 32; --8 real samples ... not sure if it should be 8 or 16. longer windows smooths things. shorter window gives higher peak
-constant phased_sum_power_bits: integer := 14;--16 with calc. trying 7-> 14 lut
+constant phased_sum_power_bits: integer := 16;--16 with calc. trying 7-> 14 lut
 constant num_power_bits: integer := 18;
 constant power_sum_bits:	integer := 18; --actually 25 but this fits into the io regs
 constant input_power_thesh_bits:	integer := 12;
@@ -78,10 +78,28 @@ type antenna_delays is array (num_beams-1 downto 0,num_channels-1 downto 0) of i
 
 --9 beams between -60 and 60 deg. commandeer flat beams so one points at pulser
 --constant beam_delays:antenna_delays:=((15,15,15,15),(18,18,15,15),(25,22,18,15),(33,28,21,15),(42,33,23,15),(50,39,26,15),(58,45,29,15),(65,49,32,15),(71,53,33,15));
-constant beam_delays:antenna_delays:=((15,17,16,18),(18,18,15,15),(25,22,18,15),(33,28,21,15),(42,33,23,15),(50,39,26,15),(58,45,29,15),(65,49,32,15),(71,53,33,15));
+--constant beam_delays:antenna_delays:=((15,17,16,18),(18,18,15,15),(25,22,18,15),(33,28,21,15),(42,33,23,15),(50,39,26,15),(58,45,29,15),(65,49,32,15),(71,53,33,15));
 --type specific_delays is array(num_beams-1 downto 0, 3 downto 0) of signed(3 downto 0);
 --signal spec_delays: specific_delays:=(others=>(others=>(x"0")));
 
+constant beam_delays:antenna_delays:=((15,16,16,17),(19,18,16,15),(24,22,18,15),(29,25,20,15),
+												(34,29,21,15),(39,32,23,15),(44,35,25,15),(50,39,26,15),(55,42,28,15),
+												(60,46,30,15),(65,49,31,15),(70,53,33,15));
+--constant upsample_filter_length: integer:=31;
+--type upsample_coeffs_t is array (upsample_filter_length-1 downto 0) of integer range -127 to 127;
+--constant upsample_coeffs: upsample_coeffs_t:=(-1, -1, -1,  0,  1,  2,  2,  0, -3, -6,
+--																-5,  0,  9, 20, 29, 32, 29, 20,  9,  0, -5, -6, -3,  
+--																0,  2,  2,  1, 0, -1, -1, -1);
+
+																
+constant upsample_filter_length: integer:=37;
+type upsample_coeffs_t is array (upsample_filter_length-1 downto 0) of integer range -127 to 127;
+constant upsample_coeffs: upsample_coeffs_t:=(1,   1,   0,  -1,  -2,  -2,   0,   3,   5,
+         4,   0,  -6, -11, -10,   0,  18,  40,  57,  64,  57,  40,  18,
+         0, -10, -11,  -6,   0,   4,   5,   3,   0,  -2,  -2,  -1,   0,
+         1,   1);
+		--*256
+		--2,6,10,14,22,26.30,34
 --short streaming buffer for linear interp
 type streaming_data_array is array(3 downto 0, streaming_buffer_length-1 downto 0) of signed(7 downto 0);
 signal streaming_data : streaming_data_array := (others=>(others=>(others=>'0'))); --pipeline data
@@ -172,6 +190,33 @@ signal trig_bits_metadata: std_logic_vector(num_beams-1 downto 0);
 
 signal phased_trig_metadata: std_logic_vector(num_beams-1 downto 0); --for triggering beams
 
+
+
+type padded_t is array(3 downto 0, step_size*interp_factor+upsample_filter_length-1 downto 0) of signed(sample_bit_length-1 downto 0);
+signal padded_sig: padded_t:=(others=>(others=>x"00"));
+
+type fir_temp is array(3 downto 0, step_size*interp_factor-1 downto 0) of signed(15 downto 0);
+signal int_up: fir_temp:=(others=>(others=>x"0000"));
+signal int_up_first: fir_temp:=(others=>(others=>x"0000"));
+signal int_up_second: fir_temp:=(others=>(others=>x"0000"));
+
+signal int_up0: fir_temp:=(others=>(others=>x"0000"));
+signal int_up1: fir_temp:=(others=>(others=>x"0000"));
+signal int_up2: fir_temp:=(others=>(others=>x"0000"));
+signal int_up3: fir_temp:=(others=>(others=>x"0000"));
+signal int_up4: fir_temp:=(others=>(others=>x"0000"));
+signal int_up5: fir_temp:=(others=>(others=>x"0000"));
+signal int_up6: fir_temp:=(others=>(others=>x"0000"));
+signal int_up7: fir_temp:=(others=>(others=>x"0000"));
+signal int_up8: fir_temp:=(others=>(others=>x"0000"));
+signal int_up9: fir_temp:=(others=>(others=>x"0000"));
+signal int_up10: fir_temp:=(others=>(others=>x"0000"));
+signal int_up11: fir_temp:=(others=>(others=>x"0000"));
+signal int_up12: fir_temp:=(others=>(others=>x"0000"));
+signal int_up13: fir_temp:=(others=>(others=>x"0000"));
+signal int_up14: fir_temp:=(others=>(others=>x"0000"));
+signal int_up15: fir_temp:=(others=>(others=>x"0000"));
+
 -------------------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------------------------------------------
 --components, modules, etc
@@ -196,26 +241,26 @@ port(
 end component;
 
 --look up table to calculate power. 7 bit input signed to 14 bit unsigned
-component power_lut_7 is --7 bit lut for calculating power
+component power_lut_8 is --7 bit lut for calculating power
 port(
 		clk_i    : in std_logic;
-		a			: in	signed(6 downto 0);
-		z			: out	unsigned(13 downto 0));
+		a			: in	signed(7 downto 0);
+		z			: out	unsigned(15 downto 0));
 end component;
 
 --initialize fir upsampling block
-component fir_upsampling is
-port(
-		clk: std_logic;
-		reset_n: in std_logic;
-		ast_sink_data: in std_logic_vector(input_data'length-1 downto 0);
-		ast_sink_valid:in std_logic;
-		ast_sink_error:in std_logic_vector(1 downto 0);
-		ast_source_data: out std_logic_vector(output_data'length-1 downto 0);
-		ast_source_valid: out std_logic;
-		ast_source_error: out std_logic_vector(1 downto 0)
-		);
-end component;
+--component fir_upsampling is
+--port(
+--		clk: std_logic;
+--		reset_n: in std_logic;
+--		ast_sink_data: in std_logic_vector(input_data'length-1 downto 0);
+--		ast_sink_valid:in std_logic;
+--		ast_sink_error:in std_logic_vector(1 downto 0);
+--		ast_source_data: out std_logic_vector(output_data'length-1 downto 0);
+--		ast_source_valid: out std_logic;
+--		ast_source_error: out std_logic_vector(1 downto 0)
+--		);
+--end component;
 
 -------------------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------------------------------------------
@@ -264,6 +309,89 @@ begin
 	end if;
 end process;
 
+proc_upsample_by_hand:process(clk_data_i,rst_i,streaming_data, internal_phased_trig_en)
+begin
+
+	if rising_edge(clk_data_i) and (internal_phased_trig_en='1')then
+		for  ch in 0 to 3 loop
+			for sam in 0 to step_size*interp_factor-1 loop
+			
+				if (sam mod interp_factor) = 0 then
+					padded_sig(ch,sam)<=streaming_data(ch,sam / interp_factor);
+				else
+					padded_sig(ch,sam)<=x"00";
+				end if;
+
+				/*
+						  --3,7,11,19,23,27 are zero
+				int_up0(ch,sam)<=upsample_coeffs(0)*padded_sig(ch,0+sam)+upsample_coeffs(1)*padded_sig(ch,1+sam);
+				int_up1(ch,sam)<=upsample_coeffs(2)*padded_sig(ch,2+sam)+upsample_coeffs(4)*padded_sig(ch,4+sam);
+				int_up2(ch,sam)<=upsample_coeffs(5)*padded_sig(ch,5+sam)+upsample_coeffs(6)*padded_sig(ch,6+sam);
+				int_up3(ch,sam)<=upsample_coeffs(8)*padded_sig(ch,8+sam)+upsample_coeffs(9)*padded_sig(ch,9+sam);
+				int_up4(ch,sam)<=upsample_coeffs(10)*padded_sig(ch,10+sam)+upsample_coeffs(12)*padded_sig(ch,12+sam);
+				int_up5(ch,sam)<=upsample_coeffs(13)*padded_sig(ch,13+sam)+upsample_coeffs(14)*padded_sig(ch,14+sam);
+				int_up6(ch,sam)<=upsample_coeffs(15)*padded_sig(ch,15+sam)+upsample_coeffs(16)*padded_sig(ch,16+sam);
+				int_up7(ch,sam)<=upsample_coeffs(17)*padded_sig(ch,17+sam)+upsample_coeffs(18)*padded_sig(ch,18+sam);
+				int_up8(ch,sam)<=upsample_coeffs(20)*padded_sig(ch,20+sam)+upsample_coeffs(21)*padded_sig(ch,21+sam);
+				int_up9(ch,sam)<=upsample_coeffs(22)*padded_sig(ch,22+sam)+upsample_coeffs(24)*padded_sig(ch,24+sam);
+				int_up10(ch,sam)<=upsample_coeffs(25)*padded_sig(ch,25+sam)+upsample_coeffs(26)*padded_sig(ch,26+sam);
+				int_up11(ch,sam)<=upsample_coeffs(28)*padded_sig(ch,28+sam)+upsample_coeffs(29)*padded_sig(ch,29+sam);
+				int_up12(ch,sam)<=upsample_coeffs(30)*padded_sig(ch,30+sam);
+				*/
+				
+				
+				---2,6,10,14,22,26.30,34 zero
+				int_up0(ch,sam)<=upsample_coeffs(0)*padded_sig(ch,0+sam)+upsample_coeffs(1)*padded_sig(ch,1+sam);
+				int_up1(ch,sam)<=upsample_coeffs(3)*padded_sig(ch,3+sam)+upsample_coeffs(4)*padded_sig(ch,4+sam);
+				int_up2(ch,sam)<=upsample_coeffs(5)*padded_sig(ch,5+sam)+upsample_coeffs(7)*padded_sig(ch,7+sam);
+				int_up3(ch,sam)<=upsample_coeffs(8)*padded_sig(ch,8+sam)+upsample_coeffs(9)*padded_sig(ch,9+sam);
+				int_up4(ch,sam)<=upsample_coeffs(11)*padded_sig(ch,11+sam)+upsample_coeffs(12)*padded_sig(ch,12+sam);
+				int_up5(ch,sam)<=upsample_coeffs(13)*padded_sig(ch,13+sam)+upsample_coeffs(15)*padded_sig(ch,15+sam);
+				int_up6(ch,sam)<=upsample_coeffs(16)*padded_sig(ch,16+sam)+upsample_coeffs(17)*padded_sig(ch,17+sam);
+				int_up7(ch,sam)<=upsample_coeffs(18)*padded_sig(ch,18+sam)+upsample_coeffs(19)*padded_sig(ch,19+sam);
+				int_up8(ch,sam)<=upsample_coeffs(20)*padded_sig(ch,20+sam)+upsample_coeffs(21)*padded_sig(ch,21+sam);
+				int_up9(ch,sam)<=upsample_coeffs(23)*padded_sig(ch,23+sam)+upsample_coeffs(24)*padded_sig(ch,24+sam);
+				int_up10(ch,sam)<=upsample_coeffs(25)*padded_sig(ch,25+sam)+upsample_coeffs(27)*padded_sig(ch,27+sam);
+				int_up11(ch,sam)<=upsample_coeffs(28)*padded_sig(ch,28+sam)+upsample_coeffs(29)*padded_sig(ch,29+sam);
+				int_up12(ch,sam)<=upsample_coeffs(31)*padded_sig(ch,31+sam)+upsample_coeffs(32)*padded_sig(ch,32+sam);
+				int_up13(ch,sam)<=upsample_coeffs(33)*padded_sig(ch,33+sam)+upsample_coeffs(35)*padded_sig(ch,35+sam);
+				int_up14(ch,sam)<=upsample_coeffs(36)*padded_sig(ch,36+sam);
+				
+				
+				int_up_first(ch,sam)<=int_up0(ch,sam)+int_up1(ch,sam)+int_up2(ch,sam)+int_up3(ch,sam)+int_up4(ch,sam)+int_up5(ch,sam)+int_up6(ch,sam);
+				int_up_second(ch,sam)<=int_up7(ch,sam)+int_up8(ch,sam)+int_up9(ch,sam)+int_up10(ch,sam)+int_up11(ch,sam)+int_up12(ch,sam)+int_up13(ch,sam)+int_up14(ch,sam);
+
+				int_up(ch,sam)<=int_up_first(ch,sam)+int_up_second(ch,sam);
+				--rounding
+				if (int_up(ch,sam)(15)='0') and (unsigned(int_up(ch,sam)(5 downto 0))>=x"20") then
+					interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8)+1;
+					
+				elsif (int_up(ch,sam)(15)='0') and (unsigned(int_up(ch,sam)(5 downto 0))<x"20") then
+					interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8);
+					
+				elsif (int_up(ch,sam)(15)='1') and (unsigned(int_up(ch,sam)(5 downto 0))<=x"20") then
+					interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8);
+					
+				else --(int_hilbert(ch,sam)(15)='1') and (int_hilbert(ch,sam)(6 downto 0)>x"40") then
+					interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8)-1;
+				end if;
+				
+			end loop;
+			
+			for j in step_size*interp_factor to interp_data_length-1 loop
+				interp_data(ch,j)<=interp_data(ch,j-step_size*interp_factor);
+			end loop;
+			
+			for j in step_size*interp_factor to step_size*interp_factor+upsample_filter_length-1 loop
+				padded_sig(ch,j)<=padded_sig(ch,j-step_size*interp_factor);
+			end loop;
+			
+		end loop;
+
+	end if;
+end process;
+
+/*
 
 --generate FIR filter
 xUpsampling:fir_upsampling
@@ -296,7 +424,7 @@ begin
 		end loop;
 	end if;
 end process;
-			
+
 			
 --move interpolated samples along buffer. used with the fir filter. see old versions of code for linear interpolation
 proc_interpolate: process(clk_data_i, internal_phased_trig_en)
@@ -313,7 +441,7 @@ begin
 		end loop;
 	end if;
 end process;
-
+*/
 
 --do phasing to calculate the coherently summed waveforms
 proc_phasing: process(clk_data_i,internal_phased_trig_en)
@@ -354,12 +482,12 @@ begin
 				
 			if rising_edge(clk_data_i) and (internal_phased_trig_en='1') then 
 				--saturate low and high for 7 bit LUT
-				if(to_integer(phased_beam_waves_buff(i,j))>63) then
-					phased_beam_waves(i,j)<=b"0111111";--saturate max
-				elsif(to_integer(phased_beam_waves_buff(i,j))<-63) then
-				  phased_beam_waves(i,j)<=b"1000000"; --saturate min
+				if(to_integer(phased_beam_waves_buff(i,j))>127) then
+					phased_beam_waves(i,j)<=b"01111111";--saturate max
+				elsif(to_integer(phased_beam_waves_buff(i,j))<-128) then
+				  phased_beam_waves(i,j)<=b"10000000"; --saturate min
 				else
-					phased_beam_waves(i,j)<=resize(phased_beam_waves_buff(i,j),7); 
+					phased_beam_waves(i,j)<=resize(phased_beam_waves_buff(i,j),8); 
 				end if;	
 			end if;
 		end loop;
@@ -376,9 +504,10 @@ end process;
 
 --calculate the power
 --this just uses a LUT in logic to find the power from a signed value. If it synthesizes as BRAM is would be too slow. should be disributed memory
+
 DO_POWER_BEAM : for i in 0 to num_beams-1 generate
 	DO_POWER_SAMPLE : for j in 0 to step_size*interp_factor-1 generate --for j in 0 to phased_sum_length-1 generate
-		xPOWERLUT : power_lut_7
+		xPOWERLUT : power_lut_8
 		port map(
 		clk_i => clk_data_i,
 		a				=> phased_beam_waves(i,j),
@@ -393,6 +522,7 @@ begin
 	if rising_edge(clk_data_i) and internal_phased_trig_en='1' then
 		for i in 0 to num_beams-1 loop --loop over beams
 			for j in 0 to step_size*interp_factor-1 loop --for j in 16 to phased_sum_length-1 loop
+				--phased_power(i,j)<=unsigned(phased_beam_waves(i,j)*phased_beam_waves(i,j));
 				phased_power(i,j+step_size*interp_factor)<=phased_power(i,j);
 			end loop;
 		end loop;
@@ -440,16 +570,28 @@ begin
 
 			
          --add together all smaller sums
-			power_sum(i)<=power_sum_0(i)+power_sum_1(i)+power_sum_2(i)+power_sum_3(i);
-			power_sum_overlap(i)<=power_sum_1(i)+power_sum_2(i)+power_sum_3(i)+power_sum_4(i);
+			power_sum(i)<=power_sum_0(i)+power_sum_1(i)+power_sum_2(i);--+power_sum_3(i);
+			power_sum_overlap(i)<=power_sum_1(i)+power_sum_2(i)+power_sum_3(i);--+power_sum_4(i);
 			
-
+			--round
+			if (power_sum(i)(4 downto 0))>=x"10" then
+				avg_power(i)<=resize(unsigned(power_sum(i)(num_power_bits-1 downto 5)),num_power_bits)+1;
+			else
+				avg_power(i)<=resize(unsigned(power_sum(i)(num_power_bits-1 downto 5)),num_power_bits);
+			end if;
+			
+			if (power_sum_overlap(i)(4 downto 0))>=x"10" then
+				avg_power_overlap(i)<=resize(unsigned(power_sum_overlap(i)(num_power_bits-1 downto 5)),num_power_bits)+1;
+			else
+				avg_power_overlap(i)<=resize(unsigned(power_sum_overlap(i)(num_power_bits-1 downto 5)),num_power_bits);
+			end if;
+				
 		   --get the average power (bit selecting above bit 5, (divide by 32))		
-			avg_power(i)(power_sum_bits-1 downto power_sum_bits-num_div)<=unsigned(pad_zeros);
-			avg_power(i)(power_sum_bits-1-num_div downto 0)<=power_sum(i)(power_sum_bits-1 downto num_div); --divide by window size
+			--avg_power(i)(power_sum_bits-1 downto power_sum_bits-num_div)<=unsigned(pad_zeros);
+			--avg_power(i)(power_sum_bits-1-num_div downto 0)<=power_sum(i)(power_sum_bits-1 downto num_div); --divide by window size
 			
-			avg_power_overlap(i)(power_sum_bits-1 downto power_sum_bits-num_div)<=unsigned(pad_zeros);
-			avg_power_overlap(i)(power_sum_bits-1-num_div downto 0)<=power_sum_overlap(i)(power_sum_bits-1 downto num_div); --divide by window size
+			--avg_power_overlap(i)(power_sum_bits-1 downto power_sum_bits-num_div)<=unsigned(pad_zeros);
+			--avg_power_overlap(i)(power_sum_bits-1-num_div downto 0)<=power_sum_overlap(i)(power_sum_bits-1 downto num_div); --divide by window size
 			
 		end loop;
 	end if;

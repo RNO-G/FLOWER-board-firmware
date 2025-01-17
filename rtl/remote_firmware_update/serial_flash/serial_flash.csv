@@ -1,0 +1,18 @@
+# system info serial_flash on 2024.12.14.21:39:59
+system_info:
+name,value
+DEVICE,5CEBA5F23C7
+DEVICE_FAMILY,Cyclone V
+GENERATION_ID,1734230398
+#
+#
+# Files generated for serial_flash on 2024.12.14.21:39:59
+files:
+filepath,kind,attributes,module,is_top
+simulation/serial_flash.v,VERILOG,,serial_flash,true
+simulation/submodules/altera_serial_flash_loader.v,VERILOG,,altera_serial_flash_loader,false
+#
+# Map from instance-path to kind of module
+instances:
+instancePath,module
+serial_flash.serial_flash_loader_0,altera_serial_flash_loader

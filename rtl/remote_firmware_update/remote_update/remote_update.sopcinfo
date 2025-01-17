@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <EnsembleReport name="remote_update" kind="remote_update" version="1.0" fabric="QSYS">
- <!-- Format version 18.1 625 (Future versions may contain additional information.) -->
- <!-- 2021.05.28.11:36:16 -->
+ <!-- Format version 20.1 711 (Future versions may contain additional information.) -->
+ <!-- 2024.12.14.21:40:29 -->
  <!-- A collection of modules and connections -->
  <parameter name="AUTO_GENERATION_ID">
   <type>java.lang.Integer</type>
-  <value>1622219776</value>
+  <value>1734230429</value>
   <derived>false</derived>
   <enabled>true</enabled>
   <visible>false</visible>
@@ -98,7 +98,7 @@
  <module
    name="remote_update_0"
    kind="altera_remote_update"
-   version="18.1"
+   version="20.1"
    path="remote_update_0">
   <!-- Describes a single module. Module parameters are
 the requested settings for a module instance. -->
@@ -225,7 +225,7 @@ the requested settings for a module instance. -->
    <visible>true</visible>
    <valid>true</valid>
   </parameter>
-  <interface name="busy" kind="conduit_end" version="18.1">
+  <interface name="busy" kind="conduit_end" version="20.1">
    <!-- The connection points exposed by a module instance for the
 particular module parameters. Connection points and their
 parameters are a RESULT of the module parameters. -->
@@ -274,7 +274,7 @@ parameters are a RESULT of the module parameters. -->
     <role>busy</role>
    </port>
   </interface>
-  <interface name="data_out" kind="conduit_end" version="18.1">
+  <interface name="data_out" kind="conduit_end" version="20.1">
    <!-- The connection points exposed by a module instance for the
 particular module parameters. Connection points and their
 parameters are a RESULT of the module parameters. -->
@@ -323,7 +323,7 @@ parameters are a RESULT of the module parameters. -->
     <role>data_out</role>
    </port>
   </interface>
-  <interface name="param" kind="conduit_end" version="18.1">
+  <interface name="param" kind="conduit_end" version="20.1">
    <!-- The connection points exposed by a module instance for the
 particular module parameters. Connection points and their
 parameters are a RESULT of the module parameters. -->
@@ -372,7 +372,7 @@ parameters are a RESULT of the module parameters. -->
     <role>param</role>
    </port>
   </interface>
-  <interface name="read_param" kind="conduit_end" version="18.1">
+  <interface name="read_param" kind="conduit_end" version="20.1">
    <!-- The connection points exposed by a module instance for the
 particular module parameters. Connection points and their
 parameters are a RESULT of the module parameters. -->
@@ -421,7 +421,7 @@ parameters are a RESULT of the module parameters. -->
     <role>read_param</role>
    </port>
   </interface>
-  <interface name="reconfig" kind="conduit_end" version="18.1">
+  <interface name="reconfig" kind="conduit_end" version="20.1">
    <!-- The connection points exposed by a module instance for the
 particular module parameters. Connection points and their
 parameters are a RESULT of the module parameters. -->
@@ -470,7 +470,7 @@ parameters are a RESULT of the module parameters. -->
     <role>reconfig</role>
    </port>
   </interface>
-  <interface name="reset_timer" kind="conduit_end" version="18.1">
+  <interface name="reset_timer" kind="conduit_end" version="20.1">
    <!-- The connection points exposed by a module instance for the
 particular module parameters. Connection points and their
 parameters are a RESULT of the module parameters. -->
@@ -519,7 +519,7 @@ parameters are a RESULT of the module parameters. -->
     <role>reset_timer</role>
    </port>
   </interface>
-  <interface name="write_param" kind="conduit_end" version="18.1">
+  <interface name="write_param" kind="conduit_end" version="20.1">
    <!-- The connection points exposed by a module instance for the
 particular module parameters. Connection points and their
 parameters are a RESULT of the module parameters. -->
@@ -568,7 +568,7 @@ parameters are a RESULT of the module parameters. -->
     <role>write_param</role>
    </port>
   </interface>
-  <interface name="data_in" kind="conduit_end" version="18.1">
+  <interface name="data_in" kind="conduit_end" version="20.1">
    <!-- The connection points exposed by a module instance for the
 particular module parameters. Connection points and their
 parameters are a RESULT of the module parameters. -->
@@ -617,7 +617,7 @@ parameters are a RESULT of the module parameters. -->
     <role>data_in</role>
    </port>
   </interface>
-  <interface name="clock" kind="clock_sink" version="18.1">
+  <interface name="clock" kind="clock_sink" version="20.1">
    <!-- The connection points exposed by a module instance for the
 particular module parameters. Connection points and their
 parameters are a RESULT of the module parameters. -->
@@ -662,7 +662,7 @@ parameters are a RESULT of the module parameters. -->
     <role>clk</role>
    </port>
   </interface>
-  <interface name="reset" kind="reset_sink" version="18.1">
+  <interface name="reset" kind="reset_sink" version="20.1">
    <!-- The connection points exposed by a module instance for the
 particular module parameters. Connection points and their
 parameters are a RESULT of the module parameters. -->
@@ -714,7 +714,7 @@ parameters are a RESULT of the module parameters. -->
   <type>com.altera.entityinterfaces.IElementClass</type>
   <subtype>com.altera.entityinterfaces.IModule</subtype>
   <displayName>Remote Update Intel FPGA IP</displayName>
-  <version>18.1</version>
+  <version>20.1</version>
  </plugin>
  <plugin>
   <instanceCount>8</instanceCount>
@@ -722,7 +722,7 @@ parameters are a RESULT of the module parameters. -->
   <type>com.altera.entityinterfaces.IElementClass</type>
   <subtype>com.altera.entityinterfaces.IMutableConnectionPoint</subtype>
   <displayName>Conduit</displayName>
-  <version>18.1</version>
+  <version>20.1</version>
  </plugin>
  <plugin>
   <instanceCount>1</instanceCount>
@@ -730,7 +730,7 @@ parameters are a RESULT of the module parameters. -->
   <type>com.altera.entityinterfaces.IElementClass</type>
   <subtype>com.altera.entityinterfaces.IMutableConnectionPoint</subtype>
   <displayName>Clock Input</displayName>
-  <version>18.1</version>
+  <version>20.1</version>
  </plugin>
  <plugin>
   <instanceCount>1</instanceCount>
@@ -738,8 +738,8 @@ parameters are a RESULT of the module parameters. -->
   <type>com.altera.entityinterfaces.IElementClass</type>
   <subtype>com.altera.entityinterfaces.IMutableConnectionPoint</subtype>
   <displayName>Reset Input</displayName>
-  <version>18.1</version>
+  <version>20.1</version>
  </plugin>
- <reportVersion>18.1 625</reportVersion>
+ <reportVersion>20.1 711</reportVersion>
  <uniqueIdentifier></uniqueIdentifier>
 </EnsembleReport>
