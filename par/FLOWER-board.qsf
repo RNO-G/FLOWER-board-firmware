@@ -269,11 +269,14 @@ set_instance_assignment -name INPUT_TERMINATION DIFFERENTIAL -to adc1_dB_i[1]
 set_instance_assignment -name INPUT_TERMINATION DIFFERENTIAL -to adc1_dB_i[2]
 set_instance_assignment -name INPUT_TERMINATION DIFFERENTIAL -to adc1_dB_i[3]
 set_global_assignment -name AUTO_DSP_RECOGNITION OFF
-set_global_assignment -name VERILOG_FILE ../rtl/8_bit_lut.v
+set_global_assignment -name VHDL_FILE ../rtl/upsampling.vhdl
+set_global_assignment -name VHDL_FILE ../rtl/power_trigger.vhd
+set_global_assignment -name VHDL_FILE ../rtl/power_lut_8.vhdl
+set_global_assignment -name VHDL_FILE ../rtl/power_integration.vhdl
+set_global_assignment -name VHDL_FILE ../rtl/defs.vhd
+set_global_assignment -name VHDL_FILE ../rtl/beamforming.vhdl
 set_global_assignment -name VERILOG_FILE ../rtl/analytic_to_envelope_lut.v
 set_global_assignment -name VHDL_FILE ../rtl/envelope_trigger.vhd
-set_global_assignment -name VERILOG_FILE ../rtl/7_bit_lut.v
-set_global_assignment -name VHDL_FILE ../rtl/phased_trigger.vhd
 set_global_assignment -name QIP_FILE ../rtl/remote_firmware_update/serial_flash/synthesis/serial_flash.qip
 set_global_assignment -name QIP_FILE ../rtl/remote_firmware_update/remote_update/remote_update/synthesis/remote_update.qip
 set_global_assignment -name QIP_FILE ../rtl/remote_firmware_update/remote_update/epcqio_block/synthesis/epcqio_block.qip
@@ -297,7 +300,6 @@ set_global_assignment -name VHDL_FILE ../rtl/slow_clocks.vhd
 set_global_assignment -name VHDL_FILE ../rtl/clock_manager.vhd
 set_global_assignment -name QIP_FILE ../rtl/ip_blocks/pll_block_1.qip
 set_global_assignment -name VHDL_FILE ../rtl/reset_and_startup.vhd
-set_global_assignment -name VHDL_FILE ../rtl/defs.vhd
 set_global_assignment -name VHDL_FILE ../rtl/readout_controller.vhd
 set_global_assignment -name VHDL_FILE ../rtl/cpu_interface.vhd
 set_global_assignment -name VHDL_FILE ../rtl/registers.vhd

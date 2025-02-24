@@ -104,6 +104,10 @@ type average_power_16samp_type is array(define_num_beams-1 downto 0) of std_logi
 constant num_beams: integer:=12;
 constant num_channels: integer:=4;
 
+type upsampling_input_t is array(3 downto 0) of signed(7 downto 0);
+type upsampling_output_t is array(15 downto 0) of signed(7 downto 0);
+constant step_size: integer:=4;
+constant interp_factor:integer:=4;
 ----------------------------------------------------------------------
 end defs;
 

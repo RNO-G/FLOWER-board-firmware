@@ -1,0 +1,36 @@
+
+#OUTDATED COMMANDS! Will need to set work dir to .. and source directory to .
+command to analyze tb: 
+ghdl -a --std=08 {each_dependency for the final tb}
+ghdl -a --std=08 trigger_tb.vhdl
+ghdl -e --std=08 trigger_tb
+ghdl -r --std=08 trigger_tb --stop-time=2048ns
+
+
+input thresholds should be integers 0 <= thresh <= 4095 in the format
+    beam0_thresh beam1_thresh beam2_thresh ... beam11_thresh
+
+input waveforms needs to be formatted weirdly so the trigger module can decode the bit array
+    to samples. See make_waveforms.py as an example. The files may need to be front padded 
+    with 128's for each sample and channel such that the thresholds can propagate from the 
+    slow clock to the fast clock used in the trigger
+
+    ch0_sample_set ch1_sample_set ch2_sample_set ch3_sample_set
+    next sets ...
+
+trigger_tb works by setting the control signals for normal operation
+    and then reads in thresholds and test waveforms from text files
+    each of the 'main' loop will read in a single line of the waveforms
+    containing 4 samples per channel as one big int, with spaces seperating the channels
+    then the output trigger signal will be recorded.
+
+waves_tb will run the waveforms through the typical algorithm (upsmapling, beamforming, power integration)
+    and will save the outputs of those to output_upsampled.txt output_beamformed.txt and output_power.txt
+
+output_triggers contains a row for each clock cycle (or set of 4 samples) with some latency
+    so if 1, triggers on 4 sample set some clock cycles alignof
+    if 0 doesn't trigger. clock latency tbd
+
+all signals can be plotted with plot_waves.py
+
+output_waveforms tbd

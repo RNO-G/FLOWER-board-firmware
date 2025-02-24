@@ -420,7 +420,7 @@ begin
 		coinc_trig_metadata_o => coinc_trig_bits_metadata,
 		coinc_trig_o=> coinc_trig_internal);
 	
-	xPHASED_TRIG : entity work.phased_trigger--envelope_trigger
+	xPHASED_TRIG : entity work.power_trigger--envelope_trigger
 	port map(
 		rst_i			=> reset_power_on,
 		clk_i			=> clock_internal_10MHz_loc,
