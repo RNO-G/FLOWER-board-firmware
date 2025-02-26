@@ -6,7 +6,8 @@ use work.defs.all;
 
 entity beamforming is
     generic(
-            ENABLE_PHASED_TRIG : std_logic := '1'
+            ENABLE_PHASED_TRIG : std_logic := '1';
+				station_number_i : in std_logic_vector(7 downto 0)
             );
     
     port(
@@ -15,16 +16,19 @@ entity beamforming is
             enable : in std_logic;
             ch_data_i : in std_logic_vector(num_channels*step_size*interp_factor*8-1 downto 0);
             beam_data_o : out std_logic_vector(num_beams*step_size*interp_factor*8-1 downto 0)
+            --specific_dels: in specific_delays_t
             );
     end beamforming;
     
 architecture rtl of beamforming is
 
+--constant STATION_INDEX: integer:=1; 
 constant interp_data_length: integer := interp_factor*(24)+1;--interp_factor*(streaming_buffer_length-1)+1;
 constant sample_bit_length: integer:=8;
 constant baseline: unsigned(7 downto 0) := x"80";
 constant phased_sum_bits: integer := 8; --8. trying 7 bit lut
 constant phased_sum_length: integer := 16;
+constant num_stations: integer:=8;
 
 --buffer to store the interpolated sample for being pulled when doing the beamforming / summation
 type interpolated_data_array is array(3 downto 0, interp_data_length-1 downto 0) of signed(sample_bit_length-1 downto 0);
@@ -38,16 +42,52 @@ signal phased_beam_waves_buff: phased_arr_buff:= (others=>(others=>(others=>'0')
 type phased_arr is array (num_beams-1 downto 0,phased_sum_length-1 downto 0) of signed(phased_sum_bits-1 downto 0);-- range 0 to 2**phased_sum_bits-1; --phased sum... log2(16*8)=7bits
 signal phased_beam_waves: phased_arr:= (others=>(others=>(others=>'0')));
 
-type antenna_delays is array (num_beams-1 downto 0,num_channels-1 downto 0) of integer range 0 to 127;
+type antenna_delays is array (num_stations-1 downto 0, num_beams-1 downto 0,num_channels-1 downto 0) of integer range 0 to 127;
 --12 beams equally spaced between -60 and 60 generated with make_beams.py
-constant beam_delays:antenna_delays:=((0,2,1,3),(3,3,0,0),(8,6,2,0),(13,10,4,0),(19,13,6,0),(24,17,8,0),(29,20,9,0),(35,24,11,0),(40,27,13,0),(45,31,15,0),(50,34,17,0),(56,38,18,0));
 
+
+function convert_station_to_index(number:std_logic_vector)
+	return integer is
+	begin
+		if number = x"0b" then return 0;
+		elsif number = x"0c" then return 1;
+		elsif number = x"0d" then return 2;
+		elsif number = x"0e" then return 3;
+		elsif number = x"15" then return 4;
+		elsif number = x"16" then return 5;
+		elsif number = x"17" then return 6;
+		elsif number = x"18" then return 7;
+		else return -1;
+		end if;
+	end function;
+
+constant station_index: integer :=convert_station_to_index(station_number_i);
+--station indexed in this order = [24 (7 ind), 23, 22, 21, 14, 13, 12, 11 (0 ind)]
+constant beam_delays:antenna_delays:=
+(((0,2,1,3),(3,3,0,0),(8,6,2,0),(13,10,4,0),(19,13,6,0),(24,17,8,0),(29,20,9,0),(35,24,11,0),(40,27,13,0),(45,31,15,0),(50,34,17,0),(56,38,18,0)),
+((0,2,3,1),(4,4,4,0),(9,7,6,0),(14,11,7,0),(19,14,9,0),(24,17,11,0),(29,21,12,0),(35,24,14,0),(40,28,16,0),(45,31,17,0),(50,34,19,0),(55,38,21,0)),
+((0,2,1,2),(3,3,1,0),(8,6,3,0),(14,10,4,0),(19,13,6,0),(24,17,8,0),(30,20,10,0),(35,24,11,0),(40,27,13,0),(45,31,15,0),(51,34,17,0),(56,38,18,0)),
+((0,0,0,2),(4,2,0,0),(9,6,2,0),(14,9,4,0),(20,13,5,0),(25,16,7,0),(30,20,9,0),(36,23,11,0),(41,27,13,0),(46,30,14,0),(51,34,16,0),(57,37,18,0)),
+((0,2,1,2),(3,3,1,0),(8,7,3,0),(14,10,4,0),(19,14,6,0),(24,17,8,0),(29,20,9,0),(34,24,11,0),(40,27,13,0),(45,31,15,0),(50,34,16,0),(55,38,18,0)),
+((0,1,1,2),(4,3,1,0),(9,6,3,0),(14,10,4,0),(19,13,6,0),(24,17,8,0),(30,20,10,0),(35,24,11,0),(40,27,13,0),(45,31,15,0),(51,34,17,0),(56,38,18,0)),
+((0,1,1,2),(4,3,1,0),(9,7,3,0),(14,10,5,0),(19,14,6,0),(24,17,8,0),(29,20,10,0),(35,24,11,0),(40,27,13,0),(45,31,15,0),(50,34,16,0),(55,38,18,0)),
+((0,1,1,2),(3,3,1,0),(9,6,3,0),(14,10,4,0),(19,13,6,0),(24,17,8,0),(30,20,10,0),(35,24,11,0),(40,27,13,0),(45,31,15,0),(51,34,17,0),(56,38,18,0)));
 begin
+
+--convert station numbers (11, 12, ...) to internal indexing on the delay array
+--station_index <= 	0 when station_number_i=x"0b" else
+--						1 when station_number_i=x"0c" else
+--						2 when station_number_i=x"0d" else
+--						3 when station_number_i=x"0e" else
+--						4 when station_number_i=x"15" else
+--						5 when station_number_i=x"16" else
+--						6 when station_number_i=x"17" else
+--						7 when station_number_i=x"18" else
+--						0;
 
 
 proc_pipeline_data: process(clk_data_i,enable)
 begin
-
 
         if rising_edge(clk_data_i) and (enable='1') then
                 for ch in 0 to 3 loop
@@ -72,11 +112,17 @@ begin
 		for j in 0 to step_size*interp_factor-1 loop
 		
 			--assign the temporary as async, but then place it into a reg... cleaner looking code
-                        phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(i,0)+(j)),10)
-                        +resize(interp_data(1,beam_delays(i,1)+(j)),10)
-                        +resize(interp_data(2,beam_delays(i,2)+(j)),10)
-                        +resize(interp_data(3,beam_delays(i,3)+(j)),10);
-                        
+                        --phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(STATION_INDEX,i,0)+(j)+to_integer(specific_dels(i,0))),10)
+                        --+resize(interp_data(1,beam_delays(STATION_INDEX,i,1)+(j)+to_integer(specific_dels(i,1))),10)
+                        --+resize(interp_data(2,beam_delays(STATION_INDEX,i,2)+(j)+to_integer(specific_dels(i,2))),10)
+                        --+resize(interp_data(3,beam_delays(STATION_INDEX,i,3)+(j)+to_integer(specific_dels(i,3))),10);
+					
+			phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(station_index,i,0)+(j)),10)
+					+resize(interp_data(1,beam_delays(station_index,i,1)+(j)),10)
+					+resize(interp_data(2,beam_delays(station_index,i,2)+(j)),10)
+					+resize(interp_data(3,beam_delays(station_index,i,3)+(j)),10);
+						
+							
 			if rising_edge(clk_data_i) and (enable='1') then 
     
 				--saturate low and high for 8 bit LUT. max=2^(8-1)-1, min=-2^(8-1)

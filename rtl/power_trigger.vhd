@@ -25,16 +25,15 @@ generic(
 		trigger_enable_reg_adr : std_logic_vector(7 downto 0) := x"3D";
 		phased_trig_reg_base	: std_logic_vector(7 downto 0):= x"50";
 		address_reg_pps_delay: std_logic_vector(7 downto 0) := x"5E";
-		phased_trig_param_reg	: std_logic_vector(7 downto 0):= x"80"
+		phased_trig_param_reg	: std_logic_vector(7 downto 0):= x"80";
+		station_number : std_logic_vector(7 downto 0):=x"0b"
 		);
 
 port(
 		rst_i			:	in		std_logic;
 		clk_i			:	in		std_logic; --register clock 
 		clk_data_i	:	in		std_logic; --data clock
-		--clk_data_2_i	:	in		std_logic; --data clock
 		registers_i	:	in		register_array_type;
-		
 		ch0_data_i	: 	in		std_logic_vector(31 downto 0);
 		ch1_data_i	:	in		std_logic_vector(31 downto 0);
 		ch2_data_i	:	in		std_logic_vector(31 downto 0);
@@ -128,9 +127,19 @@ signal trig_bits_metadata: std_logic_vector(num_beams-1 downto 0):=(others=>'0')
 signal phased_trig_metadata: std_logic_vector(num_beams-1 downto 0):=(others=>'0'); --for triggering beams
 
 
+signal upsampling_i : std_logic_vector(8*step_size*num_channels -1 downto 0):=(others=>'0');
+signal upsampling_o : std_logic_vector(8*step_size*num_channels*interp_factor -1 downto 0):=(others=>'0');	
+signal beaming_i : std_logic_vector(8*step_size*num_channels*interp_factor -1 downto 0):=(others=>'0');
+signal beaming_o : std_logic_vector(num_beams*8*step_size*interp_factor-1 downto 0):=(others=>'0');
+signal power_integration_i : std_logic_vector(num_beams*step_size*interp_factor*8-1 downto 0):=(others=>'0');
+signal power_integration_o : std_logic_vector(18*2*num_beams-1 downto 0):=(others=>'0');
+
+
+--signal specific_delays: specific_delays_t;--std_logic_vector(2*12-1 downto 0);
 -------------------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------------------------------------------
 --components, modules, etc
+
 
 --cdc slow to fast
 component signal_sync is
@@ -150,52 +159,6 @@ port(
    busy_clkA	: out	std_logic;
    out_clkB		: out	std_logic);
 end component;
-
-component upsampling is 
-port(
-		rst_i			:	in		std_logic;
-		clk_data_i	:	in		std_logic; --data clock
-		enable : in std_logic;
-		ch_data_i : in std_logic_vector(8*step_size*num_channels -1 downto 0);
-        ch_data_o : out std_logic_vector(8*step_size*num_channels*interp_factor -1 downto 0)
-
-		);
-end component;
-
-signal upsampling_i : std_logic_vector(8*step_size*num_channels -1 downto 0):=(others=>'0');
-signal upsampling_o : std_logic_vector(8*step_size*num_channels*interp_factor -1 downto 0):=(others=>'0');
-
-
-component beamforming is 
-	port(
-			rst_i			:	in		std_logic;
-			clk_data_i	:	in		std_logic; --data clock
-			enable : in std_logic;
-			ch_data_i : in std_logic_vector(8*step_size*num_channels*interp_factor -1 downto 0);
-            beam_data_o : out std_logic_vector(num_beams*step_size*interp_factor*8-1 downto 0)
-
-			);
-	end component;
-	
-signal beaming_i : std_logic_vector(8*step_size*num_channels*interp_factor -1 downto 0):=(others=>'0');
-signal beaming_o : std_logic_vector(num_beams*8*step_size*interp_factor-1 downto 0):=(others=>'0');
-
-
-component power_integration is 
-	port(
-			rst_i			:	in		std_logic;
-			clk_data_i	:	in		std_logic; --data clock
-			enable : in std_logic;
-            beam_data_i : in std_logic_vector(num_beams*step_size*interp_factor*8-1 downto 0);
-			power_o : out std_logic_vector(18*2*num_beams-1 downto 0)
-
-			);
-	end component;
-
-signal power_integration_i : std_logic_vector(num_beams*step_size*interp_factor*8-1 downto 0):=(others=>'0');
-signal power_integration_o : std_logic_vector(18*2*num_beams-1 downto 0):=(others=>'0');
-
-
 -------------------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------------------------------------------
 --begin rtl
@@ -221,7 +184,7 @@ end process;
 
 
 		
-xUpsampling : upsampling 
+xUpsampling : entity work.upsampling
 port map (
 	rst_i => rst_i,
 	clk_data_i => clk_data_i,
@@ -239,20 +202,22 @@ end generate;
 --connect upsampling to beamforming
 beaming_i<=upsampling_o;
 
-xBeamforming: beamforming
+xBeamforming: entity work.beamforming
+generic map (station_number_i => station_number)
 port map (
 	rst_i => rst_i,
 	clk_data_i => clk_data_i,
 	enable => internal_phased_trig_en,
 	ch_data_i => beaming_i,
 	beam_data_o => beaming_o
+	--specific_dels => specific_delays
 );
 
 
 --connect beamforming output to power integration
 power_integration_i<=beaming_o;
 
-xPower: power_integration
+xPower: entity work.power_integration
 port map (
 	rst_i => rst_i,
 	clk_data_i => clk_data_i,
@@ -400,21 +365,21 @@ begin
 	end if;
 end process;
 
-
+/*
 --specific delays for channels/stations didn't work. leaving in case someone tries
---SPECDELAYS : for bm in 0 to num_beams-1 generate
---	SPECDELAYSCHANNELS: for ch in 0 to 3 generate
---		SPECDELAYSBITS : for b in 0 to 3 generate
---			xSPECDELAYS : signal_sync
---			port map(
---			clkA				=> clk_i,
---			clkB				=> clk_data_i,
---			SignalIn_clkA	=> registers_i(to_integer(unsigned(phased_trig_param_reg)+12)+bm)(b+4*ch), --threshold from software
---			SignalOut_clkB	=> spec_delays(bm,ch)(b));
---		end generate;
---	end generate;
---end generate;
-
+SPECDELAYS : for bm in 0 to num_beams-1 generate
+	SPECDELAYSCHANNELS: for ch in 0 to 3 generate
+		SPECDELAYSBITS : for b in 0 to 1 generate
+			xSPECDELAYS : signal_sync
+			port map(
+			clkA				=> clk_i,
+			clkB				=> clk_data_i,
+			SignalIn_clkA	=> registers_i(140+bm)(b+2*ch), --threshold from software
+			SignalOut_clkB	=> specific_delays(bm,ch)(b));
+		end generate;
+	end generate;
+end generate;
+*/
 
 --sync the trigger beam mask to clk_data_i from slow reg clock
 TRIGBEAMMASK : for bm in 0 to num_beams-1 generate --beam masks. 1 == on

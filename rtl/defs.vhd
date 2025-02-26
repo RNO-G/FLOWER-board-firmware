@@ -108,6 +108,8 @@ type upsampling_input_t is array(3 downto 0) of signed(7 downto 0);
 type upsampling_output_t is array(15 downto 0) of signed(7 downto 0);
 constant step_size: integer:=4;
 constant interp_factor:integer:=4;
+type specific_delays_t is array (11 downto 0, 3 downto 0) of unsigned(1 downto 0);
+
 ----------------------------------------------------------------------
 end defs;
 

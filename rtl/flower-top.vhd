@@ -85,8 +85,9 @@ architecture rtl of flower_top is
 	constant fw_version_maj	: std_logic_vector(7 downto 0)  := x"00";
 	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"0e";
 	constant fw_year			: std_logic_vector(11 downto 0) := x"7E9";
-	constant fw_month			: std_logic_vector(3 downto 0)  := x"1";
-	constant fw_day			: std_logic_vector(7 downto 0)  := x"10";
+	constant fw_month			: std_logic_vector(3 downto 0)  := x"2";
+	constant fw_day			: std_logic_vector(7 downto 0)  := x"18";
+	constant station_number : std_logic_vector(7 downto 0)  := x"0b";
 	---------------------------------------
 	--//the following signals to/from Clock_Manager--
 	signal clock_internal_10MHz_sys		:	std_logic;	
@@ -303,7 +304,7 @@ begin
 		-----------------------------
 		--//status/read-only registers
 		firmware_date_i					=> fw_year & fw_month & fw_day,
-		firmware_ver_i						=> x"00" & fw_version_maj & fw_version_min, 
+		firmware_ver_i						=> station_number & fw_version_maj & fw_version_min, 
 		i2c_read_reg_i						=> data_to_read_i2c,
 		fpga_temp_i							=> (others=>'0'), --fpga_temp,
 		scaler_to_read_i 					=> scaler_to_read_int, --scaler_to_read,
@@ -421,6 +422,7 @@ begin
 		coinc_trig_o=> coinc_trig_internal);
 	
 	xPHASED_TRIG : entity work.power_trigger--envelope_trigger
+	generic map (station_number => station_number)
 	port map(
 		rst_i			=> reset_power_on,
 		clk_i			=> clock_internal_10MHz_loc,
