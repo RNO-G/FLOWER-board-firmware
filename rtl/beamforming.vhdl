@@ -22,8 +22,7 @@ entity beamforming is
     
 architecture rtl of beamforming is
 
---constant STATION_INDEX: integer:=1; 
-constant interp_data_length: integer := interp_factor*(24)+1;--interp_factor*(streaming_buffer_length-1)+1;
+constant interp_data_length: integer := interp_factor*(20); -- atleast 16 larger than highest delay
 constant sample_bit_length: integer:=8;
 constant baseline: unsigned(7 downto 0) := x"80";
 constant phased_sum_bits: integer := 8; --8. trying 7 bit lut
@@ -72,19 +71,10 @@ constant beam_delays:antenna_delays:=
 ((0,1,1,2),(4,3,1,0),(9,6,3,0),(14,10,4,0),(19,13,6,0),(24,17,8,0),(30,20,10,0),(35,24,11,0),(40,27,13,0),(45,31,15,0),(51,34,17,0),(56,38,18,0)),
 ((0,1,1,2),(4,3,1,0),(9,7,3,0),(14,10,5,0),(19,14,6,0),(24,17,8,0),(29,20,10,0),(35,24,11,0),(40,27,13,0),(45,31,15,0),(50,34,16,0),(55,38,18,0)),
 ((0,1,1,2),(3,3,1,0),(9,6,3,0),(14,10,4,0),(19,13,6,0),(24,17,8,0),(30,20,10,0),(35,24,11,0),(40,27,13,0),(45,31,15,0),(51,34,17,0),(56,38,18,0)));
+
+
+
 begin
-
---convert station numbers (11, 12, ...) to internal indexing on the delay array
---station_index <= 	0 when station_number_i=x"0b" else
---						1 when station_number_i=x"0c" else
---						2 when station_number_i=x"0d" else
---						3 when station_number_i=x"0e" else
---						4 when station_number_i=x"15" else
---						5 when station_number_i=x"16" else
---						6 when station_number_i=x"17" else
---						7 when station_number_i=x"18" else
---						0;
-
 
 proc_pipeline_data: process(clk_data_i,enable)
 begin
@@ -133,12 +123,6 @@ begin
 				else
 				        phased_beam_waves(i,j)<=resize(phased_beam_waves_buff(i,j),8); 
 				end if;	
-			end if;
-		end loop;
-		
-		for j in step_size*interp_factor to phased_sum_length-1 loop
-			if rising_edge(clk_data_i) and (enable='1') then 
-				phased_beam_waves(i,j)<=phased_beam_waves(i,j-step_size*interp_factor);
 			end if;
 		end loop;
 	end loop;

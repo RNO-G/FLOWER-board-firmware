@@ -88,7 +88,7 @@ DO_POWER_BEAM : for i in 0 to num_beams-1 generate
 end generate;
 
 
---instead of recalculating the power for samples 16-31, just copy the previous 0-15 here
+/*
 proc_move_power:process(clk_data_i,enable)
 begin
 	if rising_edge(clk_data_i) and enable='1' then
@@ -96,14 +96,14 @@ begin
 
 		for i in 0 to num_beams-1 loop --loop over beams
 			for j in 0 to step_size*interp_factor-1 loop --for j in 16 to phased_sum_length-1 loop
-				--phased_power(i,j)<=unsigned(phased_beam_waves(i,j)*phased_beam_waves(i,j));
-				--phased_power(i,j+step_size*interp_factor)<=phased_power(i,j);
+				--phased_power(i,j)<=unsigned(phased_beam_waves(i,j)*phased_beam_waves(i,j)); --for mult
+				--phased_power(i,j+step_size*interp_factor)<=phased_power(i,j); --for power sum >16 but not factor of 2
 			end loop;
 		end loop;
 
 	end if;
 end process;
-
+*/
 
 --block to do the power integration
 proc_avg_beam_power : process(clk_data_i,enable)

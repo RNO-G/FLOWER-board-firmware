@@ -67,7 +67,7 @@ begin
     assign_channels_in: for ch in 0 to 3 generate
         assign_samples: for sam in 0 to step_size-1 generate
             streaming_data(ch,sam)<=signed(ch_data_i(8*(sam+1)+ch*4*8-1 downto ch*4*8+8*sam));
-           --streaming_data(0,sam)<=signed(ch0_data_i(8*(sam+1)-1 downto 8*sam));
+				--streaming_data(0,sam)<=signed(ch0_data_i(8*(sam+1)-1 downto 8*sam));
             --streaming_data(1,sam)<=signed(ch1_data_i(8*(sam+1)-1 downto 8*sam));
             --streaming_data(2,sam)<=signed(ch2_data_i(8*(sam+1)-1 downto 8*sam));
             --streaming_data(3,sam)<=signed(ch3_data_i(8*(sam+1)-1 downto 8*sam));
