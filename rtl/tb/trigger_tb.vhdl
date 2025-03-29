@@ -41,7 +41,6 @@ component power_trigger
             trig_bits_o : 	out	std_logic_vector(2*(num_beams+1)-1 downto 0); --for scalers
             phased_trig_o: 	out	std_logic; --trigger
             phased_trig_metadata_o: out std_logic_vector(num_beams-1 downto 0); --for triggering beams
-            power_o: out std_logic_vector(22 downto 0) --test avg power for debugging located in metadata
 
             );
 end component;

@@ -31,6 +31,10 @@ component upsampling is
     
     
     component beamforming is 
+        generic
+        (
+            station_number_i : in std_logic_vector(7 downto 0)
+        );
         port(
                 rst_i			:	in		std_logic;
                 clk_data_i	:	in		std_logic; --data clock
@@ -40,7 +44,7 @@ component upsampling is
     
                 );
         end component;
-        
+    
     signal beaming_i : std_logic_vector(8*step_size*num_channels*interp_factor -1 downto 0):=(others=>'0');
     signal beaming_o : std_logic_vector(num_beams*8*step_size*interp_factor-1 downto 0):=(others=>'0');
     
@@ -51,13 +55,13 @@ component upsampling is
                 clk_data_i	:	in		std_logic; --data clock
                 enable : in std_logic;
                 beam_data_i : in std_logic_vector(num_beams*step_size*interp_factor*8-1 downto 0);
-                power_o : out std_logic_vector(18*2*num_beams-1 downto 0)
+                power_o : out std_logic_vector(14*4*num_beams-1 downto 0)
     
                 );
         end component;
     
     signal power_integration_i : std_logic_vector(num_beams*step_size*interp_factor*8-1 downto 0):=(others=>'0');
-    signal power_integration_o : std_logic_vector(18*2*num_beams-1 downto 0):=(others=>'0');
+    signal power_integration_o : std_logic_vector(14*4*num_beams-1 downto 0):=(others=>'0');
     
 -----------------------------------------------------------------------------
 -- Testbench Internal Signals
@@ -104,6 +108,7 @@ begin
 
     
     xBeamforming: beamforming
+    generic map (station_number_i=>x"0b")
     port map (
         rst_i => rst_i,
         clk_data_i => clock,
@@ -150,10 +155,10 @@ begin
         begin
 
             --io files
-            file_open(file_INPUT, "data/input_waveforms.txt", read_mode);
-            file_open(file_UPSAMPLING, "data/output_upsampled.txt", write_mode);
-            file_open(file_BEAMFORMING, "data/output_beamformed.txt", write_mode);
-            file_open(file_POWER, "data/output_power.txt", write_mode);
+            file_open(file_INPUT, "tb/data/input_waveforms.txt", read_mode);
+            file_open(file_UPSAMPLING, "tb/data/output_upsampled.txt", write_mode);
+            file_open(file_BEAMFORMING, "tb/data/output_beamformed.txt", write_mode);
+            file_open(file_POWER, "tb/data/output_power.txt", write_mode);
 
 
             --read in thresholds and assign to regs
@@ -206,7 +211,7 @@ begin
                 writeline(output,v_OLINE);
                 writeline(output,v_OLINE);
 
-                write(v_OLINE,power_integration_o,right,12*18*2);
+                write(v_OLINE,power_integration_o,right,12*14*4);
                 writeline(output,v_OLINE);
                 --write(v_OLINE,ch0_output,right,32*4);
                 --writeline(output,v_OLINE);
@@ -234,8 +239,8 @@ begin
 
                 --write averaged power
                 for bm in 0 to 11 loop
-                    for i in 0 to 1 loop
-                        write(v_OLINE,unsigned(power_integration_o(18*2*bm+18*(i+1)-1 downto 18*2*bm+18*i)),right,8);
+                    for i in 0 to 3 loop
+                        write(v_OLINE,unsigned(power_integration_o(14*4*bm+14*(i+1)-1 downto 14*4*bm+14*i)),right,8);
                         write(v_OLINE, v_SPACE);
                     end loop;
                 end loop;

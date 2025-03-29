@@ -81,7 +81,7 @@ signal coincidence_servo : std_logic; --one clk_data_i period
 signal internal_coinc_trig_en : std_logic := '0'; --enable this trigger block from sw
 
 signal coinc_window_int	: std_logic_vector(7 downto 0) := x"02"; --//num of clk_data_i periods
-constant baseline			: std_logic_vector(7 downto 0) := x"80";
+constant baseline : std_logic_vector(7 downto 0) := x"80";
 signal channel_mask : std_logic_vector(3 downto 0):=x"f";
 signal triggering_channels: std_logic_vector(3 downto 0):=x"0";
 
@@ -212,6 +212,7 @@ end process;
 proc_coinc_trig : process(rst_i, clk_data_i)
 begin
 	if rst_i = '1' then
+		triggering_channels<=(others=>'0');
 		coincidence_trigger_reg <= "00";
 		coincidence_trigger <= '0'; -- the trigger
 
@@ -246,15 +247,21 @@ begin
 			else
 				servo_clear(i) <= '0';
 			end if;
-				
+
 			if channel_servo_reg(i)(0) = '1' then
 				servo_counter(i) <= servo_counter(i) + 1;
 			else
 				servo_counter(i) <= (others=>'0');
 			end if;
 			------------------------------------
+			if unsigned(channel_trig_reg(i))>0 then
+				triggering_channels(i)<='1';
+			else
+				triggering_channels(i)<='0';
+			end if;
+
 		end loop;
-		
+
 		--for i in 0 to 3 loop
 		--	if to_integer(unsigned(channel_trig_reg(i)))>0 and channel_mask(i)='1' then
 		--		triggering_channels(i)<='1';
@@ -264,27 +271,35 @@ begin
 		--end loop;
 		
 		--if to_integer(unsigned(triggering_channels))>to_integer(unsigned(coinc_require_int)) then
-					
+
 		--	coincidence_trigger_reg(0) <= '1';
 		--	coinc_trig_metadata_o<=triggering_channels;
 			
 		--else
 		--	coincidence_trigger_reg(0) <= '0';
 		--end if;
+
+		if unsigned(triggering_channels)>unsigned(coinc_require_int) then
+			coincidence_trigger_reg(0)<='1';
+			coinc_trig_metadata_o<=triggering_channels;
+		else
+			coincidence_trigger_reg(0)<='0';
+		end if;
 		
-			
+
 		--//coinc requirement. Note that 1 channel required for trigger when 'coinc_require_int' == 0
-		if to_integer(unsigned(channel_trig_reg(0))) + to_integer(unsigned(channel_trig_reg(1))) + 
-			to_integer(unsigned(channel_trig_reg(2))) + to_integer(unsigned(channel_trig_reg(3))) > to_integer(unsigned(coinc_require_int)) then
+		--if to_integer(unsigned(channel_trig_reg(0))) + to_integer(unsigned(channel_trig_reg(1))) + 
+		--	to_integer(unsigned(channel_trig_reg(2))) + to_integer(unsigned(channel_trig_reg(3))) > to_integer(unsigned(coinc_require_int)) then
 			
-			coincidence_trigger_reg(0) <= '1';
+		--	coincidence_trigger_reg(0) <= '1';
 			
 			--this isn't the best metadata out as a channel could have contributed on a previous clock cycle which wouldn't be seen here
-			coinc_trig_metadata_o<=channel_trig_reg(3)(0)&channel_trig_reg(2)(0)&channel_trig_reg(1)(0)&channel_trig_reg(0)(0);
+			--coinc_trig_metadata_o<=channel_trig_reg(3)(0)&channel_trig_reg(2)(0)&channel_trig_reg(1)(0)&channel_trig_reg(0)(0);
+			--coinc_trig_metadata_o<=(unsigned(channel_trig_reg(3))>0)&(unsigned(channel_trig_reg(2))>0)&(unsigned(channel_trig_reg(1))>0)&(unsigned(channel_trig_reg(0))>0);
 		
-		else
-			coincidence_trigger_reg(0) <= '0';
-		end if;
+		--else
+		--	coincidence_trigger_reg(0) <= '0';
+		--end if;
 		
 		coincidence_trigger_reg(1) <= coincidence_trigger_reg(0); --dumb way to trigger on "01", rising edge
 		if coincidence_trigger_reg = "01" then
@@ -358,7 +373,7 @@ xVPPMODESYNC : signal_sync
 	SignalIn_clkA	=> registers_i(to_integer(unsigned(coinc_trig_param_reg)))(16), --vppmode
 	SignalOut_clkB	=> vppmode_int);
 --------------
--- i dont understand why these arent single clock cycle ticks... instead it's two clock cycles for scalers and only single for the trigger
+
 trig_array_for_scalers <=  servo_clear(3) & servo_clear(2) &
 									servo_clear(1) & servo_clear(0) & coincidence_servo &
 									trig_clear(3) & trig_clear(2) & trig_clear(1) & 

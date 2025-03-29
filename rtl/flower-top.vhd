@@ -85,8 +85,8 @@ architecture rtl of flower_top is
 	constant fw_version_maj	: std_logic_vector(7 downto 0)  := x"00";
 	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"0e";
 	constant fw_year			: std_logic_vector(11 downto 0) := x"7E9";
-	constant fw_month			: std_logic_vector(3 downto 0)  := x"2";
-	constant fw_day			: std_logic_vector(7 downto 0)  := x"18";
+	constant fw_month			: std_logic_vector(3 downto 0)  := x"4";
+	constant fw_day			: std_logic_vector(7 downto 0)  := x"01";
 	constant station_number : std_logic_vector(7 downto 0)  := x"0b";
 	---------------------------------------
 	--//the following signals to/from Clock_Manager--
@@ -287,7 +287,7 @@ begin
 		pps_i			=> internal_delayed_pps, --gpio_sas_io(0), 
 		phased_trig_bits_metadata_i => phased_trig_bits_metadata,
 		coinc_trig_bits_metadata_i => coinc_trig_bits_metadata,
-		power_i => power_metadata,
+		--power_i => power_metadata,
 		latched_timestamp_o  => latched_timestamp,
 		status_reg_o	 => event_manager_status_reg,
 		ram_write_o		 => event_ram_write_en,
@@ -435,7 +435,7 @@ begin
 		trig_bits_o => phased_trig_scaler_bits,
 		phased_trig_o=> phased_trig_internal,
 		phased_trig_metadata_o => phased_trig_bits_metadata
-		,power_o=>power_metadata
+		--,power_o=>power_metadata
 		);
 	
 	

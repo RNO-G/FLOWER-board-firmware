@@ -1,7 +1,6 @@
 library IEEE;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.math_real.log2;
 use work.defs.all;
 
 entity upsampling is
@@ -21,29 +20,25 @@ entity upsampling is
 architecture rtl of upsampling is
 
     constant upsample_filter_length: integer:=37;
-    type upsample_coeffs_t is array (upsample_filter_length-1 downto 0) of integer range -127 to 127;
-    constant upsample_coeffs: upsample_coeffs_t:=(1,   1,   0,  -1,  -2,  -2,   0,   3,   5,
-                4,   0,  -6, -11, -10,   0,  18,  40,  57,  64,  57,  40,  18,
-                0, -10, -11,  -6,   0,   4,   5,   3,   0,  -2,  -2,  -1,   0,
-                1,   1);
-            --*256
-            --2,6,10,14,22,26.30,34
+    type upsample_coeffs_t is array (upsample_filter_length-1 downto 0) of integer range -128 to 127;
+    constant upsample_coeffs: upsample_coeffs_t:=(1, 1, 0, -1, -2, -2, 0, 3, 5, 4, 0, -6, -11, -10, 0, 
+                                                    18, 40, 57, 64, 57, 40, 18, 0, -10, -11, -6, 0, 4,
+                                                    5, 3, 0, -2, -2, -1, 0, 1, 1);
+    --*256
+    --2,6,10,14,22,26.30,34 are zero
+
     --short streaming buffer for linear interp
     type streaming_data_array is array(3 downto 0, 3 downto 0) of signed(7 downto 0);
     signal streaming_data : streaming_data_array := (others=>(others=>(others=>'0'))); --pipeline data
-    
+
     --buffer to store the interpolated sample for being pulled when doing the beamforming / summation
     type interpolated_data_array is array(3 downto 0, step_size*interp_factor-1 downto 0) of signed(7 downto 0);
     signal interp_data: interpolated_data_array:= (others=>(others=>(others=>'0')));
-    
+
     type padded_t is array(3 downto 0, step_size*interp_factor-1+upsample_filter_length downto 0) of signed(7 downto 0);
     signal padded_sig: padded_t:=(others=>(others=>x"00"));
 
     type fir_temp is array(3 downto 0, step_size*interp_factor-1 downto 0) of signed(15 downto 0);
-    signal int_up: fir_temp:=(others=>(others=>x"0000"));
-    signal int_up_first: fir_temp:=(others=>(others=>x"0000"));
-    signal int_up_second: fir_temp:=(others=>(others=>x"0000"));
-
     signal int_up0: fir_temp:=(others=>(others=>x"0000"));
     signal int_up1: fir_temp:=(others=>(others=>x"0000"));
     signal int_up2: fir_temp:=(others=>(others=>x"0000"));
@@ -61,16 +56,17 @@ architecture rtl of upsampling is
     signal int_up14: fir_temp:=(others=>(others=>x"0000"));
     signal int_up15: fir_temp:=(others=>(others=>x"0000"));
 
+    type fir_temp_big is array(3 downto 0, step_size*interp_factor-1 downto 0) of signed(15 downto 0);
+    signal int_up: fir_temp_big:=(others=>(others=>x"0000"));
+    signal int_up_first: fir_temp_big:=(others=>(others=>x"0000"));
+    signal int_up_second: fir_temp_big:=(others=>(others=>x"0000"));
+
 begin
 
     --assign inputs
     assign_channels_in: for ch in 0 to 3 generate
         assign_samples: for sam in 0 to step_size-1 generate
             streaming_data(ch,sam)<=signed(ch_data_i(8*(sam+1)+ch*4*8-1 downto ch*4*8+8*sam));
-				--streaming_data(0,sam)<=signed(ch0_data_i(8*(sam+1)-1 downto 8*sam));
-            --streaming_data(1,sam)<=signed(ch1_data_i(8*(sam+1)-1 downto 8*sam));
-            --streaming_data(2,sam)<=signed(ch2_data_i(8*(sam+1)-1 downto 8*sam));
-            --streaming_data(3,sam)<=signed(ch3_data_i(8*(sam+1)-1 downto 8*sam));
         end generate;
     end generate;
 
@@ -78,19 +74,9 @@ begin
     assign_channels_out: for ch in 0 to 3 generate
         assign_samples_o: for sam in 0 to step_size*interp_factor-1 generate
             ch_data_o(8*(sam+1)+ch*16*8-1 downto ch*16*8+8*sam)<=std_logic_vector(interp_data(ch,sam));
-
-            --ch0_data_o(8*(sam+1)-1 downto 8*sam)<=std_logic_vector(interp_data(0,sam));
-            --ch1_data_o(8*(sam+1)-1 downto 8*sam)<=std_logic_vector(interp_data(1,sam));
-            --ch2_data_o(8*(sam+1)-1 downto 8*sam)<=std_logic_vector(interp_data(2,sam));
-            --ch3_data_o(8*(sam+1)-1 downto 8*sam)<=std_logic_vector(interp_data(3,sam));
         end generate;
     end generate;
 
-    zero_padding_ch: for ch in 0 to 3 generate
-
-    end generate;
-            
-                
     -- do the upsampling
     proc_upsample_by_hand:process(clk_data_i, rst_i, enable)
     begin
@@ -103,10 +89,8 @@ begin
 
         if rising_edge(clk_data_i) and (enable='1')then
             for  ch in 0 to 3 loop
-
                 for sam in 0 to step_size*interp_factor-1 loop
-                    
-                    
+
                     --convolve with filter in parts
                     ---2,6,10,14,22,26.30,34 zero
                     int_up0(ch,sam)<=upsample_coeffs(0)*padded_sig(ch,0+sam)+upsample_coeffs(1)*padded_sig(ch,1+sam);
@@ -124,30 +108,30 @@ begin
                     int_up12(ch,sam)<=upsample_coeffs(31)*padded_sig(ch,31+sam)+upsample_coeffs(32)*padded_sig(ch,32+sam);
                     int_up13(ch,sam)<=upsample_coeffs(33)*padded_sig(ch,33+sam)+upsample_coeffs(35)*padded_sig(ch,35+sam);
                     int_up14(ch,sam)<=upsample_coeffs(36)*padded_sig(ch,36+sam);
-                    
+
                     --sum parts first stage
                     int_up_first(ch,sam)<=int_up0(ch,sam)+int_up1(ch,sam)+int_up2(ch,sam)+int_up3(ch,sam)+int_up4(ch,sam)+int_up5(ch,sam)+int_up6(ch,sam);
                     int_up_second(ch,sam)<=int_up7(ch,sam)+int_up8(ch,sam)+int_up9(ch,sam)+int_up10(ch,sam)+int_up11(ch,sam)+int_up12(ch,sam)+int_up13(ch,sam)+int_up14(ch,sam);
 
                     --sum parts second stage
                     int_up(ch,sam)<=int_up_first(ch,sam)+int_up_second(ch,sam);
-                    
+
                     --do division (bit shifting) with rounding
                     if (int_up(ch,sam)(15)='0') and (unsigned(int_up(ch,sam)(5 downto 0))>=x"20") then
                         interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8)+1;
-                        
+
                     elsif (int_up(ch,sam)(15)='0') and (unsigned(int_up(ch,sam)(5 downto 0))<x"20") then
                         interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8);
-                        
+
                     elsif (int_up(ch,sam)(15)='1') and (unsigned(int_up(ch,sam)(5 downto 0))<=x"20") then
                         interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8);
-                        
+
                     else --(int_hilbert(ch,sam)(15)='1') and (int_hilbert(ch,sam)(6 downto 0)>x"40") then
                         interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8)-1;
                     end if;
-                    
+
                 end loop;
-                
+
                 --shift padded sig for future clock cycles
                 for j in step_size*interp_factor to step_size*interp_factor+upsample_filter_length-1 loop
                     padded_sig(ch,j)<=padded_sig(ch,j-step_size*interp_factor);

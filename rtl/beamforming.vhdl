@@ -1,18 +1,17 @@
 library IEEE;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.math_real.log2;
 use work.defs.all;
 
 entity beamforming is
     generic(
             ENABLE_PHASED_TRIG : std_logic := '1';
-				station_number_i : in std_logic_vector(7 downto 0)
+            station_number_i : in std_logic_vector(7 downto 0)
             );
     
     port(
-            rst_i			:	in		std_logic;
-            clk_data_i	:	in		std_logic; --data clock
+            rst_i : in std_logic;
+            clk_data_i : in	std_logic; --data clock
             enable : in std_logic;
             ch_data_i : in std_logic_vector(num_channels*step_size*interp_factor*8-1 downto 0);
             beam_data_o : out std_logic_vector(num_beams*step_size*interp_factor*8-1 downto 0)
@@ -46,22 +45,23 @@ type antenna_delays is array (num_stations-1 downto 0, num_beams-1 downto 0,num_
 
 
 function convert_station_to_index(number:std_logic_vector)
-	return integer is
-	begin
-		if number = x"0b" then return 0;
-		elsif number = x"0c" then return 1;
-		elsif number = x"0d" then return 2;
-		elsif number = x"0e" then return 3;
-		elsif number = x"15" then return 4;
-		elsif number = x"16" then return 5;
-		elsif number = x"17" then return 6;
-		elsif number = x"18" then return 7;
-		else return -1;
-		end if;
-	end function;
+    return integer is
+    begin
+        if number = x"0b" then return 0;
+        elsif number = x"0c" then return 1;
+        elsif number = x"0d" then return 2;
+        elsif number = x"0e" then return 3;
+        elsif number = x"15" then return 4;
+        elsif number = x"16" then return 5;
+        elsif number = x"17" then return 6;
+        elsif number = x"18" then return 7;
+        else return -1;
+        end if;
+    end function;
 
 constant station_index: integer :=convert_station_to_index(station_number_i);
 --station indexed in this order = [24 (7 ind), 23, 22, 21, 14, 13, 12, 11 (0 ind)]
+--beams 11 to 0 w/ beam 12 pointing down, and 0 pointing up
 constant beam_delays:antenna_delays:=
 (((0,2,1,3),(3,3,0,0),(8,6,2,0),(13,10,4,0),(19,13,6,0),(24,17,8,0),(29,20,9,0),(35,24,11,0),(40,27,13,0),(45,31,15,0),(50,34,17,0),(56,38,18,0)),
 ((0,2,3,1),(4,4,4,0),(9,7,6,0),(14,11,7,0),(19,14,9,0),(24,17,11,0),(29,21,12,0),(35,24,14,0),(40,28,16,0),(45,31,17,0),(50,34,19,0),(55,38,21,0)),
@@ -93,39 +93,39 @@ begin
                 end loop;
         end if;
 end process;
-        
+
 --do phasing to calculate the coherently summed waveforms
 proc_phasing: process(clk_data_i,enable)
 begin
-	
-	for i in 0 to num_beams-1 loop --loop over beams
-		for j in 0 to step_size*interp_factor-1 loop
-		
-			--assign the temporary as async, but then place it into a reg... cleaner looking code
-                        --phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(STATION_INDEX,i,0)+(j)+to_integer(specific_dels(i,0))),10)
-                        --+resize(interp_data(1,beam_delays(STATION_INDEX,i,1)+(j)+to_integer(specific_dels(i,1))),10)
-                        --+resize(interp_data(2,beam_delays(STATION_INDEX,i,2)+(j)+to_integer(specific_dels(i,2))),10)
-                        --+resize(interp_data(3,beam_delays(STATION_INDEX,i,3)+(j)+to_integer(specific_dels(i,3))),10);
-					
-			phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(station_index,i,0)+(j)),10)
-					+resize(interp_data(1,beam_delays(station_index,i,1)+(j)),10)
-					+resize(interp_data(2,beam_delays(station_index,i,2)+(j)),10)
-					+resize(interp_data(3,beam_delays(station_index,i,3)+(j)),10);
-						
-							
-			if rising_edge(clk_data_i) and (enable='1') then 
-    
-				--saturate low and high for 8 bit LUT. max=2^(8-1)-1, min=-2^(8-1)
-				if((phased_beam_waves_buff(i,j))>127) then
-					phased_beam_waves(i,j)<=b"01111111";--saturate max
-				elsif((phased_beam_waves_buff(i,j))<-128) then
-				        phased_beam_waves(i,j)<=b"10000000"; --saturate min
-				else
-				        phased_beam_waves(i,j)<=resize(phased_beam_waves_buff(i,j),8); 
-				end if;	
-			end if;
-		end loop;
-	end loop;
+
+    for i in 0 to num_beams-1 loop --loop over beams
+        for j in 0 to step_size*interp_factor-1 loop
+        
+            --async add then clock saturation
+            --phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(STATION_INDEX,i,0)+(j)+to_integer(specific_dels(i,0))),10)
+            --+resize(interp_data(1,beam_delays(STATION_INDEX,i,1)+(j)+to_integer(specific_dels(i,1))),10)
+            --+resize(interp_data(2,beam_delays(STATION_INDEX,i,2)+(j)+to_integer(specific_dels(i,2))),10)
+            --+resize(interp_data(3,beam_delays(STATION_INDEX,i,3)+(j)+to_integer(specific_dels(i,3))),10);
+
+            phased_beam_waves_buff(i,j)<=resize(interp_data(0,beam_delays(station_index,i,0)+(j)),10)
+                                        +resize(interp_data(1,beam_delays(station_index,i,1)+(j)),10)
+                                        +resize(interp_data(2,beam_delays(station_index,i,2)+(j)),10)
+                                        +resize(interp_data(3,beam_delays(station_index,i,3)+(j)),10);
+
+            if rising_edge(clk_data_i) and (enable='1') then 
+
+                --saturate low and high for 8 bit LUT. max=2^(8-1)-1, min=-2^(8-1)
+                if((phased_beam_waves_buff(i,j))>127) then
+                    phased_beam_waves(i,j)<=b"01111111";--saturate max
+                elsif((phased_beam_waves_buff(i,j))<-128) then
+                    phased_beam_waves(i,j)<=b"10000000"; --saturate min
+                else
+                    phased_beam_waves(i,j)<=resize(phased_beam_waves_buff(i,j),8);
+                end if;
+
+            end if;
+        end loop;
+    end loop;
 end process;
 
 assign_beams_o: for bm in 0 to 11 generate

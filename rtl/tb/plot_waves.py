@@ -1,6 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+def get_peak_average_power(trace,window=24):
+    pows=trace*trace
+    peak=0
+    for i in range(len(trace)-window):
+        avg_pow=np.sum(pows[i:i+window])
+        if avg_pow>peak:
+            peak=avg_pow
+    return peak/32
+
+
 input_data=np.loadtxt("data/plot_input_waveforms.txt")
 
 
@@ -43,16 +53,16 @@ for i in range(256):
         beam_data[bm][sam]=val
     #input()
 f=open("data/output_power.txt")
-power_data=np.zeros((12,int(1024/2)))
+power_data=np.zeros((12,1024))
 for i in range(256):
     line=f.readline()
-    vals=(line.split(" "))[0:2*12]
+    if i<10:continue
+    vals=(line.split(" "))[0:4*12]
     #vals=vals[::-1]
-
-    for j in range(12*2):
+    for j in range(12*4):
         val=(int(vals[j],2))#output_data[i][j]-128
-        bm=int(np.trunc(j/2))
-        sam=2*i+(1-j % 2)
+        bm=int(np.trunc(j/4))
+        sam=4*i+(3-j)
         #print(bm,sam)
         power_data[bm][sam]=val
 
@@ -61,7 +71,7 @@ trigs=np.loadtxt("data/output_trigger.txt")
 t_base=np.arange(0,1024,1)/.472
 t_up=np.arange(0,1024,.25)/.472#-29.25
 t_beamformed=np.arange(0,1024,.25)/.472#-29.25
-t_power=np.arange(0,1024,2)/.472#-29.25
+t_power=np.arange(0,1024,1)/.472#-29.25
 t_trig=np.arange(0,1024,4)/.472
 
 ts_base=np.arange(0,1024,1)
@@ -72,21 +82,23 @@ plt.plot(ts_base,input_data[3],label="ch %i base"%3)
 plt.plot(ts_up,up_data[3],label="ch %i upsampled"%3)
 
 plt.legend(loc="right")
-plt.show()
+#plt.show()
 
-
-plt.figure()
+fig,ax=plt.subplots(3,1)
 for i in range(4):
-    plt.plot(t_base,input_data[i],label="ch %i base"%i)
-    plt.plot(t_up,up_data[i],label="ch %i upsampled"%i)
+    ax[0].plot(t_base,input_data[i],label="ch %i base"%i)
+    print(np.std(input_data[i]))
 
+    ax[0].plot(t_up,up_data[i],label="ch %i upsampled"%i)
+ax[0].legend()
 for i in range(12):
-    plt.plot(t_beamformed,beam_data[i],label="beam %i wave"%i)
-
+    ax[1].plot(t_beamformed,beam_data[i],label="beam %i wave"%i)
+    print(get_peak_average_power(beam_data[i]))
+ax[1].legend()
 for i in range(12):
-    plt.plot(t_power,power_data[i],label="bm %i power"%i)
+    ax[2].plot(t_power,power_data[i],label="bm %i power"%i)
+ax[2].plot(t_trig,trigs*500,label="triggers")
+ax[2].legend()
 
-plt.plot(t_trig,trigs*500,label="triggers")
-plt.xlabel("time (ns)")
-plt.legend(loc="right")
+ax[2].set_xlabel("time (ns)")
 plt.show()

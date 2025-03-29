@@ -1,19 +1,41 @@
 
-#OUTDATED COMMANDS! Will need to set work dir to .. and source directory to .
+# These test benches are intented to validate the firmware written, especially when comparing
+# to the implementation in simulation (which should match except the averaging 3/3/25 since the window
+# is summed over 24 samples and then divided by 32)
+
+# Instructions to run
 command to analyze tb: 
-ghdl -a --std=08 {each_dependency for the final tb}
-ghdl -a --std=08 trigger_tb.vhdl
+be in the rtl directory
+
+ghdl -a --std=08 defs.vhd
+ghdl -a --std=08 upsampling.vhdl
+ghdl -a --std=08 beamingforming.vhdl
+ghdl -a --std=08 power_lut_8.vhdl
+ghdl -a --std=08 power_integration.vhdl
+ghdl -a --std=08 power_trigger.vhd
+
+For a full trigger tb
+ghdl -a --std=08 tb/trigger_tb.vhdl
 ghdl -e --std=08 trigger_tb
 ghdl -r --std=08 trigger_tb --stop-time=2048ns
 
+For the internal trigger signals
+ghdl -a --std=08 tb/wave_tb.vhdl
+ghdl -e --std=08 wave_tb
+ghdl -r --std=08 wave_tb --stop-time=2048ns
 
+then move to the tb dir
+and run V to plot signals
+python3 plot_waves.py
+
+# Some explanations if the io files and test bench files
 input thresholds should be integers 0 <= thresh <= 4095 in the format
     beam0_thresh beam1_thresh beam2_thresh ... beam11_thresh
 
 input waveforms needs to be formatted weirdly so the trigger module can decode the bit array
-    to samples. See make_waveforms.py as an example. The files may need to be front padded 
+    to samples. See make_waveforms.py as an example. TO DO: The files may need to be front padded 
     with 128's for each sample and channel such that the thresholds can propagate from the 
-    slow clock to the fast clock used in the trigger
+    slow clock to the fast clock used in the trigger and no "dead time" on signal needs to be scrapped
 
     ch0_sample_set ch1_sample_set ch2_sample_set ch3_sample_set
     next sets ...
@@ -28,9 +50,13 @@ waves_tb will run the waveforms through the typical algorithm (upsmapling, beamf
     and will save the outputs of those to output_upsampled.txt output_beamformed.txt and output_power.txt
 
 output_triggers contains a row for each clock cycle (or set of 4 samples) with some latency
-    so if 1, triggers on 4 sample set some clock cycles alignof
+    so if 1, triggers on 4 sample set some clock cycles align of
     if 0 doesn't trigger. clock latency tbd
+
+output signals are recorded as they are in the modules. so one could measure propagation time through
+each module. So when plotting the signals these will be delays from each other. If you want to see
+the values as the are in sync with the input, you will need to figure out the offset... apply a clear
+delta pulse
 
 all signals can be plotted with plot_waves.py
 
-output_waveforms tbd
