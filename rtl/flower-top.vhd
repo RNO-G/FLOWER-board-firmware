@@ -83,7 +83,7 @@ architecture rtl of flower_top is
 	---------------------------------------
 	--//FIRMWARE DETAILS--
 	constant fw_version_maj	: std_logic_vector(7 downto 0)  := x"00";
-	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"0e";
+	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"0f";
 	constant fw_year			: std_logic_vector(11 downto 0) := x"7E9";
 	constant fw_month			: std_logic_vector(3 downto 0)  := x"4";
 	constant fw_day			: std_logic_vector(7 downto 0)  := x"01";
