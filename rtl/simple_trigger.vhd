@@ -59,24 +59,24 @@ type streaming_data_array is array(3 downto 0) of std_logic_vector(63 downto 0);
 signal streaming_data : streaming_data_array; --pipeline data
 signal streaming_data_2 : streaming_data_array;
 
-signal channel_trig_hi		: std_logic_vector(3 downto 0); --for hi/lo coinc
-signal channel_trig_lo		: std_logic_vector(3 downto 0); --for hi/lo coinc
-signal channel_servo_hi		: std_logic_vector(3 downto 0); --for hi/lo coinc
-signal channel_servo_lo		: std_logic_vector(3 downto 0); --for hi/lo coinc
-signal channel_trig_reg		: threshold_array;              --for coincidenc'ing
-signal channel_servo_reg	: threshold_array;              --for coincidenc'ing
+signal channel_trig_hi		: std_logic_vector(3 downto 0) := (others=>'0'); --for hi/lo coinc
+signal channel_trig_lo		: std_logic_vector(3 downto 0) := (others=>'0'); --for hi/lo coinc
+signal channel_servo_hi		: std_logic_vector(3 downto 0) := (others=>'0'); --for hi/lo coinc
+signal channel_servo_lo		: std_logic_vector(3 downto 0) := (others=>'0'); --for hi/lo coinc
+signal channel_trig_reg		: threshold_array := (others=>(others=>'0'));              --for coincidenc'ing
+signal channel_servo_reg	: threshold_array := (others=>(others=>'0'));              --for coincidenc'ing
 
-signal trig_clear				: std_logic_vector(3 downto 0);
-signal servo_clear			: std_logic_vector(3 downto 0);
-signal trig_counter			: threshold_array; --/not a threshold, but data type works
-signal servo_counter			: threshold_array;
+signal trig_clear				: std_logic_vector(3 downto 0) := (others=>'0');
+signal servo_clear			: std_logic_vector(3 downto 0) := (others=>'0');
+signal trig_counter			: threshold_array := (others=>(others=>'0')); --/not a threshold, but data type works
+signal servo_counter			: threshold_array := (others=>(others=>'0'));
 
-signal trig_array_for_scalers : std_logic_vector(9 downto 0); --//on clk_data_i
+signal trig_array_for_scalers : std_logic_vector(9 downto 0) := (others=>'0'); --//on clk_data_i
 
-signal coincidence_trigger_reg : std_logic_vector(1 downto 0);
-signal coincidence_trigger : std_logic; --actual trigger, one clk_data_i cycle
-signal coincidence_servo_reg : std_logic_vector(1 downto 0);
-signal coincidence_servo : std_logic; --one clk_data_i period
+signal coincidence_trigger_reg : std_logic_vector(1 downto 0) := (others=>'0');
+signal coincidence_trigger : std_logic :='0'; --actual trigger, one clk_data_i cycle
+signal coincidence_servo_reg : std_logic_vector(1 downto 0) := (others=>'0');
+signal coincidence_servo : std_logic :='0'; --one clk_data_i period
 
 signal internal_coinc_trig_en : std_logic := '0'; --enable this trigger block from sw
 
@@ -279,27 +279,27 @@ begin
 		--	coincidence_trigger_reg(0) <= '0';
 		--end if;
 
-		if unsigned(triggering_channels)>unsigned(coinc_require_int) then
-			coincidence_trigger_reg(0)<='1';
-			coinc_trig_metadata_o<=triggering_channels;
-		else
-			coincidence_trigger_reg(0)<='0';
-		end if;
+		--if unsigned(triggering_channels)>unsigned(coinc_require_int) then
+		--	coincidence_trigger_reg(0)<='1';
+		--	coinc_trig_metadata_o<=triggering_channels;
+		--else
+		--	coincidence_trigger_reg(0)<='0';
+		--end if;
 		
 
 		--//coinc requirement. Note that 1 channel required for trigger when 'coinc_require_int' == 0
-		--if to_integer(unsigned(channel_trig_reg(0))) + to_integer(unsigned(channel_trig_reg(1))) + 
-		--	to_integer(unsigned(channel_trig_reg(2))) + to_integer(unsigned(channel_trig_reg(3))) > to_integer(unsigned(coinc_require_int)) then
+		if to_integer(unsigned(channel_trig_reg(0))) + to_integer(unsigned(channel_trig_reg(1))) + 
+			to_integer(unsigned(channel_trig_reg(2))) + to_integer(unsigned(channel_trig_reg(3))) > to_integer(unsigned(coinc_require_int)) then
 			
-		--	coincidence_trigger_reg(0) <= '1';
-			
+			coincidence_trigger_reg(0) <= '1';
+			coinc_trig_metadata_o<=triggering_channels; --this might be behind by a clock cycle
 			--this isn't the best metadata out as a channel could have contributed on a previous clock cycle which wouldn't be seen here
 			--coinc_trig_metadata_o<=channel_trig_reg(3)(0)&channel_trig_reg(2)(0)&channel_trig_reg(1)(0)&channel_trig_reg(0)(0);
 			--coinc_trig_metadata_o<=(unsigned(channel_trig_reg(3))>0)&(unsigned(channel_trig_reg(2))>0)&(unsigned(channel_trig_reg(1))>0)&(unsigned(channel_trig_reg(0))>0);
 		
-		--else
-		--	coincidence_trigger_reg(0) <= '0';
-		--end if;
+		else
+			coincidence_trigger_reg(0) <= '0';
+		end if;
 		
 		coincidence_trigger_reg(1) <= coincidence_trigger_reg(0); --dumb way to trigger on "01", rising edge
 		if coincidence_trigger_reg = "01" then
