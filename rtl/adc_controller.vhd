@@ -101,6 +101,11 @@ signal rx_data_pipe1_ch3 : std_logic_vector(63 downto 0); --puts bytes in right 
 signal rx_data_aligned_ch2 : std_logic_vector(31 downto 0); --post adc sample alignment
 signal rx_data_aligned_ch3 : std_logic_vector(31 downto 0); --post adc sample alignemnt
 
+signal rx_data_normalized_ch0 : std_logic_vector(31 downto 0); --post adc sample alignemnt
+signal rx_data_normalized_ch1 : std_logic_vector(31 downto 0); --post adc sample alignemnt
+signal rx_data_normalized_ch2 : std_logic_vector(31 downto 0); --post adc sample alignemnt
+signal rx_data_normalized_ch3 : std_logic_vector(31 downto 0); --post adc sample alignemnt
+
 signal internal_data_0 : std_logic_vector(63 downto 0); --after pre-trig block, write-side RAM
 signal internal_data_1 : std_logic_vector(63 downto 0); --after pre-trig block, write-side RAM
 
@@ -128,6 +133,15 @@ signal internal_ram_read_adr : std_logic_vector(9 downto 0);
 
 constant offset : integer := 64; -- array offset for bit-shift operation
 constant sample_align_offset : integer := 16; --array offset for adc-to-adc sample alignment
+
+
+type gain_factor_type is array(3 downto 0) of unsigned(4 downto 0);
+signal gain_factors:gain_factor_type:=(others=>(others=>'0'));
+
+signal gain_normalization_i : std_logic_vector(8*step_size*num_channels -1 downto 0):=(others=>'0');
+signal gain_normalization_factors_i : std_logic_vector(5*num_channels -1 downto 0):=(others=>'0');
+signal gain_normalization_o : std_logic_vector(8*step_size*num_channels -1 downto 0):=(others=>'0');
+
 
 component signal_sync is
 port(
@@ -398,11 +412,50 @@ begin
 		end case;
 	end if;
 end process;
---assign output data ports, goes to trigger
-ch0_datastream_o <= rx_data_aligned_ch0;
-ch1_datastream_o <= rx_data_aligned_ch1;
-ch2_datastream_o <= rx_data_aligned_ch2;
-ch3_datastream_o <= rx_data_aligned_ch3;
+
+--data out to triggers
+ch0_datastream_o <= gain_normalization_o(8*4-1 downto 0);
+ch1_datastream_o <= gain_normalization_o(8*4-1+32 downto 32);
+ch2_datastream_o <= gain_normalization_o(8*4-1+64 downto 64);
+ch3_datastream_o <= gain_normalization_o(8*4-1+96 downto 96);
+
+proc_assign_gain: process(clk_data_i)
+begin
+	--pass through for setup in case gain changes adc patterns being stored in ram
+	if(gain_normalization_factors_i = x"00000") then
+		rx_data_normalized_ch0 <= rx_data_aligned_ch0;
+		rx_data_normalized_ch1 <= rx_data_aligned_ch1;
+		rx_data_normalized_ch2 <= rx_data_aligned_ch2;
+		rx_data_normalized_ch3 <= rx_data_aligned_ch3;
+	else		
+		rx_data_normalized_ch0 <= gain_normalization_o(8*4-1 downto 0);
+		rx_data_normalized_ch1 <= gain_normalization_o(8*4-1+32 downto 32);
+		rx_data_normalized_ch2 <= gain_normalization_o(8*4-1+64 downto 64);
+		rx_data_normalized_ch3 <= gain_normalization_o(8*4-1+96 downto 96);
+
+	end if;
+end process;
+
+xGain_Normalization : entity work.gain_normalization
+port map (
+	rst_i => rst_i,
+	clk_data_i => clk_data_i,
+	channel_gain_mult => gain_normalization_factors_i,
+	ch_data_i => gain_normalization_i,
+	ch_data_o => gain_normalization_o
+);
+
+--assign gain normalization i/o
+assign_upsampling_io: for ch in 0 to 3 generate
+    gain_normalization_factors_i((ch+1)*5-1 downto ch*5)<=std_logic_vector(gain_factors(ch));
+end generate;
+
+gain_normalization_i(8*4-1 downto 0) <= rx_data_aligned_ch0;
+gain_normalization_i(8*4-1+32 downto 32) <= rx_data_aligned_ch1;
+gain_normalization_i(8*4-1+64 downto 64) <= rx_data_aligned_ch2;
+gain_normalization_i(8*4-1+96 downto 96) <= rx_data_aligned_ch3;
+
+
 --////////////////////////////////////////////////////////////////////////
 ----MOVED RAM WRITING to data_manager.vhd 8.22/2021
 --proc_simple_sw_trigger : process(rst_i, clk_data_i)
@@ -487,14 +540,14 @@ xPRETRIG_0 : entity work.pretrigger_window --ADC0
 		rst_i				=> rst_i,
 		clk_i				=> clk_data_i,	
 		pretrig_sel_i	=> internal_pretrig_val,	
-		data_i			=> rx_data_aligned_ch1 & rx_data_aligned_ch0,	
+		data_i			=> rx_data_normalized_ch1 & rx_data_normalized_ch0,	
 		data_o			=> internal_data_0);	
 xPRETRIG_1 : entity work.pretrigger_window --ADC1
 	port map(
 		rst_i				=> rst_i,
 		clk_i				=> clk_data_i,	
 		pretrig_sel_i	=> internal_pretrig_val,	
-		data_i			=> rx_data_aligned_ch3 & rx_data_aligned_ch2,	
+		data_i			=> rx_data_normalized_ch3 & rx_data_normalized_ch2,	
 		data_o			=> internal_data_1);	
 --////////////////////////////////////////////////////////////////////////
 --One RAM block per ADC
@@ -562,4 +615,26 @@ PRETRIG_CMD : for i in 0 to 3 generate
 		SignalIn_clkA	=> registers_i(to_integer(unsigned(pretrig_reg_adr)))(i), --pretrig from software
 		SignalOut_clkB	=> internal_pretrig_val(i));
 end generate;
+
+
+GAINS_CHANNELS : for ch in 0 to 1 generate
+    GAIN_CHANNELS_BITS_0_1 : for i in 0 to 5-1 generate
+        xGAIN_NORMALIZATION_LOW : signal_sync
+        port map(
+        clkA			=> clk_i,
+        clkB			=> clk_data_i,
+        SignalIn_clkA	=> registers_i(140)(i+8*ch), --threshold from software
+        SignalOut_clkB	=> gain_factors(ch)(i));
+    end generate;
+	 
+	 GAIN_CHANNELS_BITS_2_3 : for i in 0 to 5-1 generate
+        xGAIN_NORMALIZATION_HIGH : signal_sync
+        port map(
+        clkA			=> clk_i,
+        clkB			=> clk_data_i,
+        SignalIn_clkA	=> registers_i(141)(i+8*ch), --threshold from software
+        SignalOut_clkB	=> gain_factors(ch+2)(i));
+    end generate;
+end generate;
+	 
 end rtl;

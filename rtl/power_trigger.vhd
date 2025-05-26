@@ -131,6 +131,12 @@ signal trig_bits_metadata: std_logic_vector(num_beams-1 downto 0):=(others=>'0')
 
 signal phased_trig_metadata: std_logic_vector(num_beams-1 downto 0):=(others=>'0'); --for triggering beams
 
+type gain_factor_type is array(3 downto 0) of unsigned(4 downto 0);
+signal gain_factors:gain_factor_type:=(others=>(others=>'0'));
+
+signal gain_normalization_i : std_logic_vector(8*step_size*num_channels -1 downto 0):=(others=>'0');
+signal gain_normalization_factors_i : std_logic_vector(5*num_channels -1 downto 0):=(others=>'0');
+signal gain_normalization_o : std_logic_vector(8*step_size*num_channels -1 downto 0):=(others=>'0');
 signal dedispersion_i : std_logic_vector(8*step_size*num_channels -1 downto 0):=(others=>'0');
 signal dedispersion_o : std_logic_vector(8*step_size*num_channels -1 downto 0):=(others=>'0');
 signal upsampling_i : std_logic_vector(8*step_size*num_channels -1 downto 0):=(others=>'0');
@@ -211,6 +217,30 @@ port map (
 upsampling_i<=dedispersion_o;
 */
 
+/*
+xGain_Normalization : entity work.gain_normalization
+port map (
+	rst_i => rst_i,
+	clk_data_i => clk_data_i,
+   enable => internal_phased_trig_en,
+	channel_gain_mult => gain_normalization_factors_i,
+	ch_data_i => gain_normalization_i,
+	ch_data_o => gain_normalization_o
+);
+
+
+--assign gain normalization i/o
+assign_upsampling_io: for ch in 0 to 3 generate
+    assign_sams_i: for i in 0 to 3 generate
+        gain_normalization_i(ch*8*4+8*(i+1)-1 downto ch*8*4+8*i)<=std_logic_vector(streaming_data(ch,i));
+    end generate;
+	 
+    gain_normalization_factors_i((ch+1)*5-1 downto ch*5)<=std_logic_vector(gain_factors(ch));
+end generate;
+
+upsampling_i <= gain_normalization_o;
+*/
+
 xUpsampling : entity work.upsampling
 port map (
     rst_i => rst_i,
@@ -220,7 +250,7 @@ port map (
     ch_data_o => upsampling_o
 );
 
---comment these generates if using dedispersion
+--comment these generates if using dedispersion or gain equalization
 assign_upsampling_io: for ch in 0 to 3 generate
     assign_sams_i: for i in 0 to 3 generate
         upsampling_i(ch*8*4+8*(i+1)-1 downto ch*8*4+8*i)<=std_logic_vector(streaming_data(ch,i));
@@ -424,7 +454,27 @@ TRIGBEAMMASK : for bm in 0 to num_beams-1 generate --beam masks. 1 == on
     SignalOut_clkB	=> internal_trigger_beam_mask(bm));
 end generate;
 
-
+/*
+GAINS_CHANNELS : for ch in 0 to 1 generate
+    GAIN_CHANNELS_BITS_0_1 : for i in 0 to 5-1 generate
+        xGAIN_NORMALIZATION_LOW : signal_sync
+        port map(
+        clkA			=> clk_i,
+        clkB			=> clk_data_i,
+        SignalIn_clkA	=> registers_i(140)(i+8*ch), --threshold from software
+        SignalOut_clkB	=> gain_factors(ch)(i));
+    end generate;
+	 
+	 GAIN_CHANNELS_BITS_2_3 : for i in 0 to 5-1 generate
+        xGAIN_NORMALIZATION_HIGH : signal_sync
+        port map(
+        clkA			=> clk_i,
+        clkB			=> clk_data_i,
+        SignalIn_clkA	=> registers_i(141)(i+8*ch), --threshold from software
+        SignalOut_clkB	=> gain_factors(ch+2)(i));
+    end generate;
+end generate;
+*/
 -------------------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------------------------------------------
 

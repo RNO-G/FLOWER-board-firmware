@@ -117,17 +117,12 @@ begin
                     int_up(ch,sam)<=int_up_first(ch,sam)+int_up_second(ch,sam);
 
                     --do division (bit shifting) with rounding
-                    if (int_up(ch,sam)(15)='0') and (unsigned(int_up(ch,sam)(5 downto 0))>=x"20") then
+                    if (unsigned(int_up(ch,sam)(5 downto 0))>=x"20") then
                         interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8)+1;
 
-                    elsif (int_up(ch,sam)(15)='0') and (unsigned(int_up(ch,sam)(5 downto 0))<x"20") then
+                    else --(unsigned(int_up(ch,sam)(5 downto 0))<x"20") then
                         interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8);
 
-                    elsif (int_up(ch,sam)(15)='1') and (unsigned(int_up(ch,sam)(5 downto 0))<=x"20") then
-                        interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8);
-
-                    else --(int_hilbert(ch,sam)(15)='1') and (int_hilbert(ch,sam)(6 downto 0)>x"40") then
-                        interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8)-1;
                     end if;
 
                 end loop;

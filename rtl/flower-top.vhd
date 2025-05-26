@@ -83,11 +83,11 @@ architecture rtl of flower_top is
 	---------------------------------------
 	--//FIRMWARE DETAILS--
 	constant fw_version_maj	: std_logic_vector(7 downto 0)  := x"00";
-	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"10";
+	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"11";
 	constant fw_year			: std_logic_vector(11 downto 0) := x"7E9";
-	constant fw_month			: std_logic_vector(3 downto 0)  := x"4";
-	constant fw_day			: std_logic_vector(7 downto 0)  := x"0D";
-	constant station_number : std_logic_vector(7 downto 0)  := x"18";
+	constant fw_month			: std_logic_vector(3 downto 0)  := x"5";
+	constant fw_day			: std_logic_vector(7 downto 0)  := x"1a";
+	constant station_number : std_logic_vector(7 downto 0)  := x"0b";
 	---------------------------------------
 	--//the following signals to/from Clock_Manager--
 	signal clock_internal_10MHz_sys		:	std_logic;	
