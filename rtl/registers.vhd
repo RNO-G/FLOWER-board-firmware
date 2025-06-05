@@ -193,7 +193,7 @@ begin
 		registers_io(122) <= x"000000";		
 		--//end remote upgrade registers
 		
-		for i in 0 to 16 loop
+		for i in 0 to 11 loop
 			registers_io(128+i)<=x"FFFFFF";
 		end loop;
 		read_reg_o 	<= x"00" & registers_io(1); 
