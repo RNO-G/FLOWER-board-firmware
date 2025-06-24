@@ -40,7 +40,7 @@ component power_trigger
             
             trig_bits_o : 	out	std_logic_vector(2*(num_beams+1)-1 downto 0); --for scalers
             phased_trig_o: 	out	std_logic; --trigger
-            phased_trig_metadata_o: out std_logic_vector(num_beams-1 downto 0); --for triggering beams
+            phased_trig_metadata_o: out std_logic_vector(num_beams-1 downto 0) --for triggering beams
 
             );
 end component;
@@ -71,8 +71,8 @@ signal is_enable:std_logic:='0';
 
 begin
 
-    clock <= not clock after 4 ns;
-    slow_clk <= not slow_clk after 8 ns; -- don't make it so long that it takes 100 ns to move thresholds into the trigger
+    clock <= not clock after 4.237 ns;
+    slow_clk <= not slow_clk after 8.474 ns; -- don't make it so long that it takes 100 ns to move thresholds into the trigger
 
     -----------------------------------------------------------------------------
     -- Instantiate and Map UUT
@@ -90,8 +90,7 @@ begin
         ch3_data_i	            => ch3_samples,
         trig_bits_o             => open,
         phased_trig_o           => trig,
-        phased_trig_metadata_o  => open,
-        power_o                 => temp_power
+        phased_trig_metadata_o  => open
         );
 
 
@@ -124,9 +123,9 @@ begin
         begin
 
             --io files
-            file_open(file_INPUT, "data/input_waveforms.txt", read_mode);
-            file_open(file_THRESHOLDS, "data/input_thresholds.txt", read_mode);
-            file_open(file_TRIGGERS, "data/output_trigger.txt", write_mode);
+            file_open(file_INPUT, "tb/data/input_waveforms.txt", read_mode);
+            file_open(file_THRESHOLDS, "tb/data/input_thresholds.txt", read_mode);
+            file_open(file_TRIGGERS, "tb/data/output_trigger.txt", write_mode);
 
             --read in thresholds and assign to regs
 

@@ -79,7 +79,7 @@ signal ch3_samples:std_logic_vector(31 downto 0):=x"80808080";
 
 begin
 
-    clock <= not clock after 4 ns;
+    clock <= not clock after 4.237 ns;
 
     -----------------------------------------------------------------------------
     -- Instantiate and Map UUT
@@ -165,7 +165,7 @@ begin
 
             --read in samples in sets of 4
             while not endfile(file_INPUT) loop
-                wait for 8 ns; --about 1/118e6 ns, one full clock cycle
+                wait for 8.474 ns; --about 1/118e6 ns, one full clock cycle
 
                 readline(file_INPUT, v_ILINE);
                 read(v_ILINE, ch0_samples_tmp);
@@ -188,19 +188,18 @@ begin
                 writeline(output,v_OLINE);
 
                 --write(v_OLINE,upsampling_i(31 downto 0),right,32);--4*4*8);
-                write(v_OLINE,upsampling_i(7 downto 0),right,7);--4*4*8);
+                write(v_OLINE,upsampling_i(7 downto 0),right,8);--4*4*8);
                 writeline(output,v_OLINE);
 
-                write(v_OLINE,upsampling_i(15 downto 8),right,7);--4*4*8);
-
+                write(v_OLINE,upsampling_i(15 downto 8),right,8);--4*4*8);
                 writeline(output,v_OLINE);
-                write(v_OLINE,upsampling_i(23 downto 16),right,7);--4*4*8);
 
+                write(v_OLINE,upsampling_i(23 downto 16),right,8);--4*4*8);
                 writeline(output,v_OLINE);
-                write(v_OLINE,upsampling_i(31 downto 24),right,7);--4*4*8);
 
-
+                write(v_OLINE,upsampling_i(31 downto 24),right,8);--4*4*8);
                 writeline(output,v_OLINE);
+
                 writeline(output,v_OLINE);
 
                 write(v_OLINE,upsampling_o,right,4*16*8);
@@ -240,7 +239,7 @@ begin
                 --write averaged power
                 for bm in 0 to 11 loop
                     for i in 0 to 3 loop
-                        write(v_OLINE,unsigned(power_integration_o(14*4*bm+14*(i+1)-1 downto 14*4*bm+14*i)),right,8);
+                        write(v_OLINE,unsigned(power_integration_o(14*4*bm+14*(i+1)-1 downto 14*4*bm+14*i)),right,14);
                         write(v_OLINE, v_SPACE);
                     end loop;
                 end loop;
