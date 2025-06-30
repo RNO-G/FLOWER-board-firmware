@@ -27,7 +27,7 @@ architecture rtl of upsampling is
     --*256
     --2,6,10,14,22,26.30,34 are zero
 
-    --short streaming buffer for linear interp
+    --short streaming buffer
     type streaming_data_array is array(3 downto 0, 3 downto 0) of signed(7 downto 0);
     signal streaming_data : streaming_data_array := (others=>(others=>(others=>'0'))); --pipeline data
 
@@ -117,11 +117,16 @@ begin
                     int_up(ch,sam)<=int_up_first(ch,sam)+int_up_second(ch,sam);
 
                     --do division (bit shifting) with rounding
-                    if unsigned(int_up(ch,sam)(5 downto 0))>=x"20" then
+                    if unsigned(int_up(ch,sam)(5 downto 0)) > x"20" then
                         interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8)+1;
-
+                    elsif unsigned(int_up(ch,sam)(5 downto 0)) = x"20" and int_up(ch,sam)(6) = '0' then
+                        interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8);
+                    elsif unsigned(int_up(ch,sam)(5 downto 0)) = x"20" and int_up(ch,sam)(6) = '1' then
+                        interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8) + 1;
                     else --unsigned(int_up(ch,sam)(5 downto 0))<x"20" then
                         interp_data(ch,sam)<=resize(signed(int_up(ch,sam)(15 downto 6)),8);
+
+                    end if;
                 end loop;
 
                 --shift padded sig for future clock cycles

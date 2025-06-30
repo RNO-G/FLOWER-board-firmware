@@ -1,8 +1,11 @@
 
 cd ../
-
+rm work-obj08.cf
 echo "compiliing defs"
 ghdl -a --std=08 defs.vhd
+
+echo "compiling signal sync"
+ghdl -a --std=08 tb/signal_sync.vhdl
 
 echo "compiliing upsampling"
 ghdl -a --std=08 upsampling.vhdl

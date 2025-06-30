@@ -24,7 +24,8 @@ component power_trigger
             trigger_enable_reg_adr : std_logic_vector(7 downto 0) := x"3D";
             phased_trig_reg_base	: std_logic_vector(7 downto 0):= x"50";
             address_reg_pps_delay: std_logic_vector(7 downto 0) := x"5E";
-            phased_trig_param_reg	: std_logic_vector(7 downto 0):= x"80"
+            phased_trig_param_reg	: std_logic_vector(7 downto 0):= x"80";
+            station_number : std_logic_vector(7 downto 0):=x"0b"
             );
     
     port(
@@ -158,7 +159,7 @@ begin
 
 
                 
-                wait for 8 ns; --about 1/118e6 ns, one full clock cycle
+                wait for 8.474 ns; --about 1/118e6 ns, one full clock cycle
                 --write(v_OLINE,ch0_samples(7 downto 0),right,8);
                 --writeline(output,v_OLINE);
 

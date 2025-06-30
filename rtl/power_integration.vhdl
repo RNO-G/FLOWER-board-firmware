@@ -20,7 +20,7 @@ entity power_integration is
     
 architecture rtl of power_integration is
 
-    constant phased_sum_bits: integer := 8; --8. trying 7 bit lut
+    constant phased_sum_bits: integer := 8;
     constant phased_sum_length: integer := 32; -- actual window determined by addition. This is the divisor since /2^n is easy
     constant phased_sum_power_bits: integer := 16;--16 with calc. trying 7-> 14 lut
     constant num_power_bits: integer := 18;
@@ -45,6 +45,8 @@ architecture rtl of power_integration is
     signal power_sum_6 : power_array:=(others=>(others=>'0')); --partial power integration (samples 24-27)
     signal power_sum_7 : power_array:=(others=>(others=>'0')); --partial power integration (samples 28-31)
     signal power_sum_8 : power_array:=(others=>(others=>'0')); --partial power integration (samples 32-35)
+    signal power_sum_9 : power_array:=(others=>(others=>'0')); --partial power integration (samples 36-39)
+    signal power_sum_a : power_array:=(others=>(others=>'0')); --partial power integration (samples 40-43)
 
     type bigger_power_array is array (num_beams-1 downto 0) of unsigned(19 downto 0);
     signal power_sum_10 : bigger_power_array:=(others=>(others=>'0')); --partial power integration (zero offset)
@@ -137,12 +139,14 @@ begin
             power_sum_6(i)<=power_sum_2(i);
             power_sum_7(i)<=power_sum_3(i);
             power_sum_8(i)<=power_sum_4(i);
+            power_sum_9(i)<=power_sum_5(i);
+            power_sum_a(i)<=power_sum_6(i);
 
-             --add together all smaller sums
-            power_sum_10(i)<=resize(power_sum_0(i),20)+power_sum_1(i)+power_sum_2(i)+power_sum_3(i)+power_sum_4(i)+power_sum_5(i);
-            power_sum_11(i)<=resize(power_sum_1(i),20)+power_sum_2(i)+power_sum_3(i)+power_sum_4(i)+power_sum_5(i)+power_sum_6(i);
-            power_sum_12(i)<=resize(power_sum_2(i),20)+power_sum_3(i)+power_sum_4(i)+power_sum_5(i)+power_sum_6(i)+power_sum_7(i);
-            power_sum_13(i)<=resize(power_sum_3(i),20)+power_sum_4(i)+power_sum_5(i)+power_sum_6(i)+power_sum_7(i)+power_sum_8(i);
+            --add together all smaller sums (24 sample window, uncomment and add last part for 32 sample window)
+            power_sum_10(i)<=resize(power_sum_0(i),20)+power_sum_1(i)+power_sum_2(i)+power_sum_3(i)+power_sum_4(i)+power_sum_5(i); --+power_sum_6(i)+power_sum_7(i);
+            power_sum_11(i)<=resize(power_sum_1(i),20)+power_sum_2(i)+power_sum_3(i)+power_sum_4(i)+power_sum_5(i)+power_sum_6(i); --+power_sum_7(i)+power_sum_8(i);
+            power_sum_12(i)<=resize(power_sum_2(i),20)+power_sum_3(i)+power_sum_4(i)+power_sum_5(i)+power_sum_6(i)+power_sum_7(i); --+power_sum_8(i)+power_sum_9(i);
+            power_sum_13(i)<=resize(power_sum_3(i),20)+power_sum_4(i)+power_sum_5(i)+power_sum_6(i)+power_sum_7(i)+power_sum_8(i); --+power_sum_9(i)+power_sum_a(i);
 
             --divide and round, hope dont overflow
             if (power_sum_10(i)(4 downto 0))>=x"10" then
