@@ -85,8 +85,8 @@ architecture rtl of flower_top is
 	constant fw_version_maj	: std_logic_vector(7 downto 0)  := x"00";
 	constant fw_version_min	: std_logic_vector(7 downto 0)  := x"12";
 	constant fw_year			: std_logic_vector(11 downto 0) := x"7E9";
-	constant fw_month			: std_logic_vector(3 downto 0)  := x"6";
-	constant fw_day			: std_logic_vector(7 downto 0)  := x"1e";
+	constant fw_month			: std_logic_vector(3 downto 0)  := x"7";
+	constant fw_day			: std_logic_vector(7 downto 0)  := x"01";
 	constant station_number : std_logic_vector(7 downto 0)  := x"0b";
 	---------------------------------------
 	--//the following signals to/from Clock_Manager--

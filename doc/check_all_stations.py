@@ -3,50 +3,186 @@ import matplotlib.pyplot as plt
 import os
 import json
 from NuRadioReco.detector.detector import Detector
-from datetime import datetime as dt
+from NuRadioReco.detector.RNO_G import rnog_detector
+import datetime as dt
+from scipy.signal import savgol_filter
+
+db_det=rnog_detector.Detector(
+    detector_file=None
+    )
+db_det.update(dt.datetime(2024,5,2))
+
+
+stations=[24,23,22,21,14,13,12,11]
+
+channels=[0,1,2,3]
+beams=[0,1,2,3,4,5,6,7,8,9,10,11]
+version="v0p18"
 make_plots=True
 print_for_quartus=True
-
-c=3e8
+save_beams=True
+print_for_python=True
+c=2.99792458e8
 n=1.75
-sampling_rate=118e6*4
+sampling_rate=472e6
 int_factor=4
 int_rate=sampling_rate*int_factor
 num_antennas=4
 file='RNO_season_2024.json'
 det=Detector(file,source="json")
 
-det.update(dt.now())
+det.update(dt.datetime.now())
+#det=db_det
+f=np.linspace(.06,.236,10000)
+phase_delays={}
+print("relative group delays")
+for station in stations:
 
+    #if station==14:
+    #    db_det.update(dt.datetime(2025,5,5))
+    #else:
+    #    db_det.update(dt.datetime(2023,8,3))
+
+
+    plt.figure()
+    plt.title(f"station {station}")
+
+    f = np.linspace(.06,.236,10000)
+    dts = []
+    try:
+        rel = db_det.get_signal_chain_response(station,0,trigger=True)(f)
+    except:
+        print(f"{station} not in db det for group delays")
+        phase_delays[station] = dict(zip(channels,np.zeros(4)))
+        continue
+
+    for i in range(0,4):
+        '''
+        resp = db_det.get_signal_chain_response(station,i,trigger=True)(f)
+        resp = resp/rel
+        gain = 10*np.log10(np.abs(resp))
+        ang = np.arctan2(np.imag(resp),np.real(resp))
+        #ang = np.angle(resp)
+        unwrapped = np.unwrap(ang)
+        smooth = savgol_filter(unwrapped, 1001, 1) #smoothing filter
+        group_del = -np.gradient(smooth)/(2*np.pi*(np.gradient(f)))
+        smoothed_del = savgol_filter(group_del, 601, 1) #another smoothing filter
+        dts[i] = np.mean(smoothed_del[np.where(f>.150)[0][0]:np.where(f>.2)[0][0]])
+
+        '''
+
+        fmin=.15
+        fmax=.2
+
+        fs = np.linspace(.9*fmin, 1.1*fmax, 1000)
+        response = db_det.get_signal_chain_response(station, i, trigger=True)(fs)
+  
+        phase_angle = np.angle(response)
+        unwrapped = np.unwrap(phase_angle)
+        group_delays = -np.gradient(unwrapped) / (2 * np.pi * np.gradient(fs))
+        avg_delay = np.mean( group_delays[np.logical_and(fs>fmin, fs<fmax)] )
+        dts.append(avg_delay)
+
+
+        fig,ax=plt.subplots(3,1,sharex=True,figsize=(6,8))
+        ax[0].plot(fs,phase_angle,label="angle")
+        ax[0].set_ylabel("phase angle [rad]")
+        ax[1].plot(fs,unwrapped,label="unwrapped angle")
+        #ax[1].plot(f,smooth,label="smoothed angle")
+        ax[1].set_ylabel("phase angle [rad]")
+        ax[1].legend()
+        ax[2].plot(fs,group_delays,label="group delay")
+        #ax[2].plot(fs,smoothed_del,label="smoothed group delay")
+        ax[2].set_xlabel("freq [GHz]")
+        ax[2].set_ylabel("group delay [ns]")
+        ax[2].legend()
+        fig.suptitle(f"Station {station} Channels 0-{i}")
+        plt.close()
+        #plt.show()
+
+        #plt.plot(f*1000,smoothed_del,label=f"Ch {i}")
+    plt.ylabel("Relative Group Delay [ns]")
+    plt.xlabel("Freq. [MHz]")
+    plt.ylim([-5,5])
+    plt.text(75,-4,f"Rel. to CH0 @ 200MHz {np.round(dts,decimals=3)} ns",fontsize=10)
+    plt.legend()
+    print(station, dts)
+    dts=np.array(dts)
+    #plt.close()
+    #plt.savefig(f"plots/group_delay_station_{station}.png")
+    plt.close()
+    #plt.show()
+    phase_delays[station]=dict(zip(channels,dts))
+print(phase_delays)
+f=open(f"{version}_rel_group_delays.json","w")
+json.dump(phase_delays,f,indent=4)
+#exit()
 #print(det)
 #print(det.get_channel(11,0))
 
-
-stations=[11,12,13,14,21,22,23,24]
-channels=[0,1,2,3]
 
 all_delays=np.zeros((len(stations),len(channels)))
 all_depths=np.zeros((len(stations),len(channels)))
 num_beams=12
 
-for i in range(len(stations)):
-    for j in range(len(channels)):
+extras={11:[0,(.33+.22)/2,(-.06-.25)/2,(.03-.1)/2], 12:[0,0,0,0], 13:[0,(-.1+-.09)/2,(.17+.2)/2,(-.01-.01)/2],
+        14:[0,0,0,0],21:[0,(-.03+.1)/2,(-.09-.04)/2,(-.12+.03)/2],22:[0,(+.36+.38)/2,(.01+.02)/2,(-.05+.02)/2],
+        23:[0,(-.18),(-.32-.37)/2,(-.35-.36)/2], 24:[0,0,0,0]
+        }
 
-        all_delays[i,j]=det.get_channel(stations[i],channels[j])['cab_time_delay']#data['channels']['%i'%pa_channels[i][j]]['cab_time_delay']
-        all_depths[i,j]=det.get_channel(stations[i],channels[j])['ant_position_z']#data['channels']['%i'%pa_channels[i][j]]['ant_position_z']
+for i in range(len(stations)):
+
+    for j in range(len(channels)):
+        
+        if version=="v0p16":
+            all_delays[i,j]=det.get_channel(stations[-i-1],channels[j])['cab_time_delay']
+            all_depths[i,j]=det.get_channel(stations[-i-1],channels[j])['ant_position_z'] 
+
+        if version=="v0p17":
+            all_delays[i,j]=det.get_channel(stations[i],channels[j])['cab_time_delay']
+            all_depths[i,j]=det.get_channel(stations[i],channels[j])['ant_position_z']  
+
+        if version=="v0p18":
+            #if stations[i]==14:
+            #    db_det.update(dt.datetime(2024,2,2))
+            #else:
+            #    db_det.update(dt.datetime(2023,8,3))
+
+            try:
+                #database first
+                all_delays[i,j]=db_det.get_cable_delay(stations[i],channels[j],trigger=True) + phase_delays[stations[i]][j]
+                all_depths[i,j]=db_det.get_relative_position(stations[i],channels[j])[2]
+
+            except:
+                print("db failed")
+                try:
+                    #in case there's a calibrated file
+                    all_delays[i,j]=db_det.get_channel(stations[i],channels[j])['cab_time_delay'] + phase_delays[stations[i]][j] 
+                    all_depths[i,j]=db_det.get_channel(stations[i],channels[j])['ant_position_z']
+
+                except:
+                    #fallback 2024 json
+                    all_delays[i,j]=det.get_channel(stations[i],channels[j])['cab_time_delay']+ phase_delays[stations[i]][j]
+                    all_depths[i,j]=det.get_channel(stations[i],channels[j])['ant_position_z'] 
 
 all_lookbacks=np.zeros((len(stations),4,num_beams))
-print(stations[::-1])
-for i_stat,station in enumerate(stations[::-1]):
-    cable_delays=all_delays[i_stat]#np.array([716.2603798064285,711.7615958304959,706.495904921158,702.195731800799])
-    ant_depths=all_depths[i_stat]#np.array([-96.215,-95.174,-94.183,-93.155])
+
+q_file = open(f"{version}_quartus_delays.txt","w")
+
+print(f"delays for {version}")
+print("stations",stations[::1])
+print(all_delays)
+print(all_depths)
+for i_stat,station in enumerate(stations[::1]):
+    cable_delays=all_delays[i_stat]
+    ant_depths=all_depths[i_stat]
 
     def get_delay(ant_top=0,ant_num=0,angle=0):
-        return (ant_depths[ant_top]-ant_depths[ant_num])*np.cos((90-angle)*np.pi/180)*n/c+(cable_delays[ant_num]-cable_delays[ant_top])/1e9
+        #return (ant_depths[ant_top]-ant_depths[ant_num])*np.sin(angle*np.pi/180)*n/c+(cable_delays[ant_num]-cable_delays[ant_top])/1e9
+        return (ant_depths[ant_top]-ant_depths[ant_num])*np.sin(angle*np.pi/180)*n/c-(cable_delays[ant_num])/1e9
 
 
-
-    angs=np.linspace(-80,80,160)
+    angs=np.linspace(-80,80,160*8)
     delays=np.zeros((4,len(angs)))
     lookback=np.zeros((4,len(angs)))
 
@@ -58,15 +194,39 @@ for i_stat,station in enumerate(stations[::-1]):
     for i in range(4):
         lookback[i]=-(delays[i]-np.max(delays.T,axis=1))
 
-    beam_locs=np.linspace(np.sin(-60*np.pi/180),np.sin(60*np.pi/180),num_beams)
+    beam_locs=np.linspace(np.sin(60*np.pi/180),np.sin(-60*np.pi/180),num_beams)
     beam_locs=np.arcsin(beam_locs)*180/np.pi
-    #print(beam_locs)
-    #print('beam locs',beam_locs)
+
     beam_lookback=np.zeros((4,num_beams))
-    beam_lookback[0]=np.round(np.interp(beam_locs,angs,lookback[0]*int_rate))
-    beam_lookback[1]=np.round(np.interp(beam_locs,angs,lookback[1]*int_rate))
-    beam_lookback[2]=np.round(np.interp(beam_locs,angs,lookback[2]*int_rate))
-    beam_lookback[3]=np.round(np.interp(beam_locs,angs,lookback[3]*int_rate))
+
+    beam_lookback[0]=get_delay(3,0,beam_locs)
+    beam_lookback[1]=get_delay(3,1,beam_locs)
+    beam_lookback[2]=get_delay(3,2,beam_locs)
+    beam_lookback[3]=get_delay(3,3,beam_locs)
+    #print(beam_lookback)
+    temp = beam_lookback.T
+    for i in range(12):
+        temp[i] = (temp[i] - np.min(temp[i]))
+
+    #print(temp)
+    beam_lookback = np.round(temp.T*int_rate)
+
+
+    #print(beam_lookback[0])
+    #print(beam_lookback[1])
+    #print(beam_lookback[2])
+    #print(beam_lookback[3])
+
+    #beam_lookback[0] = -(beam_lookback[0].T-np.max(beam_lookback[0].T)).T
+    #beam_lookback[1] = -(beam_lookback[1].T-np.max(beam_lookback[1].T)).T
+    #beam_lookback[2] = -(beam_lookback[2].T-np.max(beam_lookback[2].T)).T
+    #beam_lookback[3] = -(beam_lookback[3].T-np.max(beam_lookback[3].T)).T
+
+
+    #beam_lookback[0]=np.rint(np.interp(beam_locs,angs,lookback[0]*int_rate))
+    #beam_lookback[1]=np.rint(np.interp(beam_locs,angs,lookback[1]*int_rate))
+    #beam_lookback[2]=np.rint(np.interp(beam_locs,angs,lookback[2]*int_rate))
+    #beam_lookback[3]=np.rint(np.interp(beam_locs,angs,lookback[3]*int_rate))
 
     if make_plots:
         if not os.path.exists('plots'): os.mkdir('plots')
@@ -79,7 +239,7 @@ for i_stat,station in enumerate(stations[::-1]):
         plt.xlabel('angles (deg)')
         plt.ylabel('delays (s)')
         plt.legend()
-        plt.savefig('plots/%s_arrival_times.png'%station)
+        plt.savefig(f'plots/{version}/{station}_arrival_times.png')
         plt.close()
 
         plt.figure()
@@ -91,19 +251,20 @@ for i_stat,station in enumerate(stations[::-1]):
         plt.xlabel('angles (deg)')
         plt.ylabel('lookback (s)')
         plt.legend()
-        plt.savefig('plots/%s_lookback_times.png'%station)
+        plt.savefig(f'plots/{version}/{station}_lookback_times.png')
         plt.close()
 
         plt.figure()
         plt.plot(angs,lookback[0]*int_rate,label='ch0')
         plt.plot(angs,lookback[1]*int_rate,label='ch1')
         plt.plot(angs,lookback[2]*int_rate,label='ch2')
-        plt.plot(angs,lookback[3]*int_rate,label='ch3')
-
+        plt.plot(angs,lookback[3]*int_rate,label='ch3') #*int_rare
+        plt.hlines([0,1,2,3,4,5],-80,80,linestyle="dashed")
         plt.xlabel('angles (deg)')
-        plt.ylabel('lookback (int samples)')
+        plt.ylabel('lookback (samples)')
         plt.legend()
-        plt.savefig('plots/%s_lookback_interpolated_samples.png'%station)
+        #plt.show()
+        plt.savefig(f'plots/{version}/{station}_lookback_interpolated_samples.png')
         plt.close()
 
         plt.figure()
@@ -115,23 +276,71 @@ for i_stat,station in enumerate(stations[::-1]):
         plt.xlabel('angles (deg)')
         plt.ylabel('lookback (int samples)')
         plt.legend()
-        plt.savefig('plots/%s_beam_lookback_samples.png'%station)
+        plt.savefig(f'plots/{version}/{station}_beam_lookback_samples.png')
         plt.close()
-
 
     if print_for_quartus:
         #print('print out for quartus for station %s'%station)
-        print('(',end='')
+        #print(station)
+        if station==stations[0]:
+            print(f'{station} ((',end='')
+        else:
+            print(f'{station} (',end='')
+
         for i in range(num_beams):
             print('(%i,%i,%i,%i)'%(beam_lookback[3][i],beam_lookback[2][i],beam_lookback[1][i],beam_lookback[0][i]),end='')
             if i==num_beams-1:
                 break
             #if i==6: print()
             print(',',end='')
-        print('),',end='')
-        print()
-    
+        if station==stations[-1]:
+            print('));',end='\n')
+        else:
+            print('),',end='\n')
+
+        if save_beams:
+            if station==stations[0]:
+                print(f'((',end='',file=q_file)
+            else:
+                print(f'(',end='',file=q_file)
+            for i in range(num_beams):
+                print('(%i,%i,%i,%i)'%(beam_lookback[3][i],beam_lookback[2][i],beam_lookback[1][i],beam_lookback[0][i]),end='',file=q_file)
+                if i==num_beams-1:
+                    break
+                #if i==6: print()
+                print(',',end='',file=q_file)
+            if station==stations[-1]:
+                print('));',end='',file=q_file)
+            else:
+                print('),',end='',file=q_file)
+
+            print(f'--station {station}',end='\n',file=q_file)
+            
+
+
     all_lookbacks[i_stat]=beam_lookback
+form_delays={}
+if print_for_python:
+    dels = {}
+    for i in range(len(stations)):
+        #print(stations[i],all_lookbacks[i].T)
+        dels[stations[i]] = all_lookbacks[i].T
+
+        sub_form={}
+        for j in beams:
+            sub_form[f"bm_{j}"]=dict(zip([f"ch_{x}" for x in channels],all_lookbacks[i].T[-j-1]))
+        #print(sub_form)
+        form_delays[f"st_{stations[i]}"] = sub_form
+
+    #print(dels)
+    #np.save("delays_for_sims.npy",dels,allow_pickle=True)
+#np.save("json.npy",all_lookbacks)
+#print(form_delays)
+
+if save_beams:
+    f=open(f"{version}_lookbacks.json","w")
+    json.dump(form_delays,f,indent=4)
+
 
 for i in range(num_beams):
     break
@@ -146,19 +355,26 @@ for i in range(num_beams):
     plt.savefig('plots/station_rel_delays_beam%i.png'%i)
     plt.close()
 
-fig,ax=plt.subplots(num_beams,1,figsize=(5,10))
+fig,ax=plt.subplots(num_beams,1,figsize=(8,10),sharex=True)
+fig.subplots_adjust(hspace=0)
 for i in range(num_beams):
+
     ax[i].scatter(np.linspace(0,.8,len(all_lookbacks[:,0,i])),all_lookbacks[:,0,i]-np.min(all_lookbacks[:,0,i]))
     ax[i].scatter(1+np.linspace(0,.8,len(all_lookbacks[:,0,i])),all_lookbacks[:,1,i]-np.min(all_lookbacks[:,1,i]))
     ax[i].scatter(2+np.linspace(0,.8,len(all_lookbacks[:,0,i])),all_lookbacks[:,2,i]-np.min(all_lookbacks[:,2,i]))
     ax[i].scatter(3+np.linspace(0,.8,len(all_lookbacks[:,0,i])),all_lookbacks[:,3,i]-np.min(all_lookbacks[:,3,i]))
-    ax[i].set_ylabel('beam %i'%i)
-    ax[i].set_xticks([0,1,2,3])
-fig.suptitle('Beam delays from min')
+    ax[i].set_ylabel('Beam %i'%i,fontsize=10)
+    ax[i].set_xticks([0,1,2,3,4])
+    ax[i].set_yticks([0,1,2,3,4])
+    ax[i].set_ylim(bottom=0,top=4)
+    ax[i].tick_params(axis='y', which='major', labelsize=8)
+
+
+fig.suptitle(f"Relative beam delays between {stations}")
 ax[num_beams-1].set_xlabel('channel')
 fig.tight_layout()
-plt.savefig('plots/all_beams.png')
-plt.show()
+plt.savefig(f'plots/{version}/all_beams.png')
+#plt.show()
 plt.close()
 
 
@@ -170,6 +386,6 @@ for i in range(num_beams):
     plt.scatter(3*np.ones(len(all_lookbacks[:,3,i])),all_lookbacks[:,3,i])
     plt.xlabel('channel')
     plt.ylabel('beam %i sample delay'%i)
-    plt.savefig('plots/station_delays_beam%i.png'%i)
+    plt.savefig(f'plots/{version}/station_delays_beam{i}.png')
     plt.close()
 
